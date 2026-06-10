@@ -16,7 +16,7 @@ export function Creatures() {
         const cell = cellById.get(sp.markerCellId);
         if (!cell) return null;
         const { x, z } = axialToWorld(cell.q, cell.r, HEX_SIZE);
-        const y = cellTopY(cell.biome);
+        const y = cellTopY(cell.id, cell.biome);
         return (
           <Html
             key={sp.id}

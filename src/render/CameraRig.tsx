@@ -21,7 +21,8 @@ export function CameraRig() {
       ref.current?.setLookAt(0, 34, 27, 0, 0, 0, true);
     };
     cameraApi.goIntimate = () => {
-      ref.current?.setLookAt(x + 4.5, 3.6, z + 6.5, x, 0.6, z, true);
+      // Approach from the north so the central mountain doesn't block the view.
+      ref.current?.setLookAt(x + 4, 3.4, z - 6.5, x, 0.6, z, true);
     };
   }, []);
 

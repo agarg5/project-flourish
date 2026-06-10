@@ -20,7 +20,7 @@ export function Buildings() {
     <group>
       {built.map((c) => {
         const { x, z } = axialToWorld(c.q, c.r, HEX_SIZE);
-        const y = cellTopY(c.biome);
+        const y = cellTopY(c.id, c.biome);
         const color = BUILDING_COLORS[c.buildingId!] ?? '#c0a080';
         return (
           <group key={c.id} position={[x, y, z]}>
