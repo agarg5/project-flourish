@@ -136,6 +136,8 @@ export function runScenario(
   for (let t = 0; t < ticks; t++) {
     if (t % CONFIG.ticksPerTurn === 0) strategy.onTurn(sim, t / CONFIG.ticksPerTurn);
     sim.tick();
+    // Scenario players always take the age-up the moment it is offered.
+    if (sim.state.ageUpReady) sim.advanceAge();
     const s = sim.state;
     rows.push({
       tick: s.tick,

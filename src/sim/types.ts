@@ -180,7 +180,7 @@ export interface SimState {
   stewardshipBudget: number;     // earmarked income, spent by auto-stewardship
 
   cells: WorldCell[];
-  buildings: { id: string; cellId: number }[];
+  buildings: { id: string; cellId: number; builtAtTick: number }[];
   placedEffects: PlacedEffect[];
   cellActions: Record<number, string[]>; // actions already applied per cell
   species: SpeciesState[];
@@ -195,6 +195,7 @@ export interface SimState {
   flourishing: number;           // wellbeing * biodiversity / 100
   worldCarryingCapacity: number;
   ecoHealthSustainedTicks: number;
+  ageUpReady: boolean;           // both gate halves met; awaiting player confirmation
   sub: SubIndices;
 
   events: SimEvent[];

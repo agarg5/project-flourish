@@ -1,10 +1,12 @@
 import { Sky } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Bloom, EffectComposer, N8AO, TiltShift2, Vignette } from '@react-three/postprocessing';
+import { Suspense } from 'react';
 import { Buildings } from './Buildings';
 import { CameraRig } from './CameraRig';
 import { Creatures } from './Creatures';
 import { Decorations } from './Decorations';
+import { PlacementLayer } from './PlacementLayer';
 import { World } from './World';
 
 // Dev/testing handle: lets headless checks inspect the live three.js scene.
@@ -36,10 +38,13 @@ export function Scene() {
         shadow-camera-far={90}
       />
       <SceneHandle />
-      <World />
-      <Decorations />
-      <Buildings />
-      <Creatures />
+      <Suspense fallback={null}>
+        <World />
+        <Decorations />
+        <Buildings />
+        <Creatures />
+        <PlacementLayer />
+      </Suspense>
       <CameraRig />
       <EffectComposer multisampling={4}>
         <N8AO aoRadius={1.2} intensity={2.5} distanceFalloff={1} />

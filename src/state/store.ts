@@ -1,26 +1,12 @@
 // Zustand bridge between the sim (source of truth) and React/R3F consumers.
-// The sim instance lives outside React; the store holds UI snapshots only.
+// The sim instance lives outside React; the store holds UI snapshots plus
+// transient UI state (placement mode, hover).
 
 import { create } from 'zustand';
 import { createSimulation } from '../sim';
 import type { SimEvent, SpendSplit, SubIndices } from '../sim';
 
 export const sim = createSimulation(undefined, { autoStewardship: true });
-
-// Pre-place a small starter settlement so the M2 dynamics (income, habitat
-// pressure, stewardship response) are visible. M3 replaces this with the
-// "Place a shelter to begin" onboarding moment.
-{
-  const cells = sim.cellsByDistanceFromStart();
-  let camps = 0;
-  for (const c of cells) {
-    if (camps >= 2) break;
-    if (sim.placeBuilding('forager_camp', c.id).ok) camps++;
-  }
-  for (const c of cells) {
-    if (sim.placeBuilding('fire_hearth', c.id).ok) break;
-  }
-}
 
 export interface UICell {
   id: number;
@@ -41,10 +27,20 @@ export interface UISpecies {
   markerCellId: number;
 }
 
+export interface UIPlaceable {
+  kind: 'building' | 'action';
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  affordable: boolean;
+}
+
 export interface UISnapshot {
   tick: number;
   age: string;
   ageName: string;
+  ageUpReady: boolean;
   treasury: number;
   research: number;
   stewardshipBudget: number;
@@ -57,8 +53,10 @@ export interface UISnapshot {
   sub: SubIndices;
   spendSplit: SpendSplit;
   cells: UICell[];
+  buildings: { id: string; cellId: number; builtAtTick: number }[];
   species: UISpecies[];
   events: SimEvent[];
+  placeables: UIPlaceable[];
   nextAge?: {
     name: string;
     requiredResearch: number;
@@ -77,6 +75,7 @@ function takeSnapshot(): UISnapshot {
     tick: s.tick,
     age: s.age,
     ageName: cur.name,
+    ageUpReady: s.ageUpReady,
     treasury: s.treasury,
     research: s.researchPoints,
     stewardshipBudget: s.stewardshipBudget,
@@ -92,6 +91,7 @@ function takeSnapshot(): UISnapshot {
       id: c.id, q: c.q, r: c.r, biome: c.biome,
       quality: c.habitatQuality, buildingId: c.buildingId,
     })),
+    buildings: s.buildings.map((b) => ({ ...b })),
     species: s.species
       .filter((sp) => sp.population > 0)
       .map((sp) => {
@@ -107,6 +107,24 @@ function takeSnapshot(): UISnapshot {
         };
       }),
     events: [...s.events],
+    placeables: [
+      ...sim.availableBuildings().map((b) => ({
+        kind: 'building' as const,
+        id: b.id,
+        name: b.name,
+        description: b.description,
+        cost: b.cost,
+        affordable: s.treasury >= b.cost,
+      })),
+      ...sim.availableActions().map((a) => ({
+        kind: 'action' as const,
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        cost: a.cost,
+        affordable: s.treasury >= a.cost,
+      })),
+    ],
     nextAge: next
       ? {
           name: next.name,
@@ -119,17 +137,60 @@ function takeSnapshot(): UISnapshot {
   };
 }
 
-interface GameStore {
-  snap: UISnapshot;
-  refresh: () => void;
-  setSpendSplit: (split: SpendSplit) => void;
+export interface Placing {
+  kind: 'building' | 'action';
+  id: string;
 }
 
-export const useGame = create<GameStore>((set) => ({
+interface GameStore {
+  snap: UISnapshot;
+  placing: Placing | null;
+  hoveredCellId: number | null;
+  refresh: () => void;
+  setSpendSplit: (split: SpendSplit) => void;
+  setPlacing: (p: Placing | null) => void;
+  setHoveredCell: (cellId: number | null) => void;
+  placeAt: (cellId: number) => void;
+  advanceAge: () => void;
+}
+
+export const useGame = create<GameStore>((set, get) => ({
   snap: takeSnapshot(),
+  placing: null,
+  hoveredCellId: null,
   refresh: () => set({ snap: takeSnapshot() }),
   setSpendSplit: (split) => {
     sim.setSpendSplit(split);
     set({ snap: takeSnapshot() });
   },
+  setPlacing: (placing) => set({ placing }),
+  setHoveredCell: (hoveredCellId) => {
+    if (get().hoveredCellId !== hoveredCellId) set({ hoveredCellId });
+  },
+  placeAt: (cellId) => {
+    const { placing } = get();
+    if (!placing) return;
+    const res =
+      placing.kind === 'building'
+        ? sim.placeBuilding(placing.id, cellId)
+        : sim.applyAction(placing.id, cellId);
+    if (res.ok) {
+      // Keep placement mode active only if another copy is still affordable.
+      const stillAffordable =
+        placing.kind === 'building'
+          ? sim.content.buildings.find((b) => b.id === placing.id)!.cost <= sim.state.treasury
+          : sim.content.actions.find((a) => a.id === placing.id)!.cost <= sim.state.treasury;
+      set({ snap: takeSnapshot(), placing: stillAffordable ? placing : null });
+    }
+  },
+  advanceAge: () => {
+    if (sim.advanceAge().ok) set({ snap: takeSnapshot() });
+  },
 }));
+
+/** Is placement currently valid on this cell? Cheap enough to call per hover. */
+export function canPlaceAt(placing: Placing, cellId: number): boolean {
+  return placing.kind === 'building'
+    ? sim.canPlaceBuilding(placing.id, cellId).ok
+    : sim.canApplyAction(placing.id, cellId).ok;
+}

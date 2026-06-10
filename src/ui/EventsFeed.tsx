@@ -8,8 +8,11 @@ export function EventsFeed() {
   return (
     <div className="panel eventsfeed">
       {recent.map((e, i) => (
-        <div key={`${e.tick}-${i}`} className={i > 2 ? 'ev old' : 'ev'}>
-          {e.message}
+        <div
+          key={`${e.tick}-${i}`}
+          className={`ev ${i > 2 ? 'old' : ''} ${e.type === 'arrival' || e.type === 'ageUp' ? 'highlight' : ''}`}
+        >
+          {e.type === 'arrival' ? '✨ ' : ''}{e.message}
         </div>
       ))}
     </div>

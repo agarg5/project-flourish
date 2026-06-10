@@ -34,3 +34,24 @@ const SQRT3 = Math.sqrt(3);
 export function axialToWorld(q: number, r: number, size = 1): { x: number; z: number } {
   return { x: SQRT3 * size * (q + r / 2), z: 1.5 * size * r };
 }
+
+/** Round fractional axial coords to the containing hex (cube rounding). */
+export function hexRound(qf: number, rf: number): Axial {
+  const sf = -qf - rf;
+  let q = Math.round(qf);
+  let r = Math.round(rf);
+  const s = Math.round(sf);
+  const dq = Math.abs(q - qf);
+  const dr = Math.abs(r - rf);
+  const ds = Math.abs(s - sf);
+  if (dq > dr && dq > ds) q = -r - s;
+  else if (dr > ds) r = -q - s;
+  return { q, r };
+}
+
+/** Plan position -> containing hex (inverse of axialToWorld). */
+export function worldToAxial(x: number, z: number, size = 1): Axial {
+  const rf = z / (1.5 * size);
+  const qf = x / (SQRT3 * size) - rf / 2;
+  return hexRound(qf, rf);
+}

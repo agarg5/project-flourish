@@ -28,22 +28,39 @@ export function checkTechUnlocks(state: SimState, content: Content): void {
   }
 }
 
+/**
+ * Compute dual-gate eligibility (doc 03 section 6). Advancing itself is a
+ * player-confirmed command (advanceAge) — a celebratory choice, not an
+ * ambush — so this only maintains the sustain counter and readiness flag.
+ */
 export function checkAgeUp(state: SimState, content: Content): void {
   const cur = ageDef(state, content);
   const next = content.ages.find((a) => a.index === cur.index + 1);
-  if (!next) return;
+  if (!next) {
+    state.ageUpReady = false;
+    return;
+  }
 
   // Sustained, not a spike: the counter resets if eco health dips.
   if (state.ecologicalHealth >= next.requiredEcoHealth) state.ecoHealthSustainedTicks++;
   else state.ecoHealthSustainedTicks = 0;
 
-  if (
+  state.ageUpReady =
     state.researchPoints >= next.requiredResearch &&
-    state.ecoHealthSustainedTicks >= next.ecoHealthSustainTicks
-  ) {
-    state.age = next.id;
-    state.ecoHealthSustainedTicks = 0;
-    state.worldCarryingCapacity = next.ceilings.worldCarryingCapacity;
-    pushEvent(state, 'ageUp', `${next.name} — ${next.blurb}`);
-  }
+    state.ecoHealthSustainedTicks >= next.ecoHealthSustainTicks;
+}
+
+/** Advance to the next age if both gate halves are met. */
+export function advanceAge(state: SimState, content: Content): boolean {
+  if (!state.ageUpReady) return false;
+  const cur = ageDef(state, content);
+  const next = content.ages.find((a) => a.index === cur.index + 1);
+  if (!next) return false;
+
+  state.age = next.id;
+  state.ageUpReady = false;
+  state.ecoHealthSustainedTicks = 0;
+  state.worldCarryingCapacity = next.ceilings.worldCarryingCapacity;
+  pushEvent(state, 'ageUp', `${next.name} — ${next.blurb}`);
+  return true;
 }

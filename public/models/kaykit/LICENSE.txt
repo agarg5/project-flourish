@@ -1,0 +1,4 @@
+Models in this directory are from the KayKit Medieval Hexagon Pack (1.0)
+by Kay Lousberg (www.kaylousberg.com), licensed CC0 (public domain).
+https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0
+Credit is not required but happily given.

@@ -2,7 +2,7 @@
 // deterministic (no randomness anywhere). Runs headless in tests (doc 04).
 
 import { createWorldCells, START_QR } from '../data/world.seed';
-import { ageDef, checkAgeUp, checkTechUnlocks } from './ageProgression';
+import { advanceAge, ageDef, checkAgeUp, checkTechUnlocks } from './ageProgression';
 import { computeBiodiversity } from './biodiversity';
 import { CONFIG } from './config';
 import { DEFAULT_CONTENT } from './content';
@@ -65,6 +65,7 @@ export class Simulation {
       flourishing: 0,
       worldCarryingCapacity: content.ages[0].ceilings.worldCarryingCapacity,
       ecoHealthSustainedTicks: 0,
+      ageUpReady: false,
       sub: {
         nicheCoverage: 0, keystoneHealth: 0, populationHealth: 0, biomeDiversity: 0,
         needs: 0, amenity: 0, envQuality: 0, crowding: 0, settlementQuality: 0,
@@ -138,6 +139,14 @@ export class Simulation {
 
   // ---- Player commands -------------------------------------------------
 
+  /** Player-confirmed age advance; valid only when state.ageUpReady. */
+  advanceAge(): CommandResult {
+    if (!advanceAge(this.state, this.content)) {
+      return { ok: false, error: 'age-up gates not met' };
+    }
+    return { ok: true };
+  }
+
   setSpendSplit(split: SpendSplit): void {
     const total = Math.max(split.buildings, 0) + Math.max(split.rnd, 0) + Math.max(split.stewardship, 0);
     if (total <= 0) return;
@@ -166,7 +175,7 @@ export class Simulation {
     return this.content.actions.filter((a) => ids.has(a.id));
   }
 
-  placeBuilding(buildingId: string, cellId: number): CommandResult {
+  canPlaceBuilding(buildingId: string, cellId: number): CommandResult {
     const s = this.state;
     const def = this.content.buildings.find((b) => b.id === buildingId);
     if (!def) return { ok: false, error: 'unknown building' };
@@ -178,9 +187,18 @@ export class Simulation {
     if (cell.buildingId) return { ok: false, error: 'cell occupied' };
     if (!def.footprintBiomes.includes(cell.biome)) return { ok: false, error: 'wrong biome' };
     if (s.treasury < def.cost) return { ok: false, error: 'cannot afford' };
+    return { ok: true };
+  }
+
+  placeBuilding(buildingId: string, cellId: number): CommandResult {
+    const can = this.canPlaceBuilding(buildingId, cellId);
+    if (!can.ok) return can;
+    const s = this.state;
+    const def = this.content.buildings.find((b) => b.id === buildingId)!;
+    const cell = s.cells[cellId];
 
     s.treasury -= def.cost;
-    s.buildings.push({ id: def.id, cellId });
+    s.buildings.push({ id: def.id, cellId, builtAtTick: s.tick });
     cell.buildingId = def.id;
     if (def.effects.habitat?.length) {
       s.placedEffects.push({ originCellId: cellId, sourceId: def.id, effects: def.effects.habitat });
@@ -189,7 +207,7 @@ export class Simulation {
     return { ok: true };
   }
 
-  applyAction(actionId: string, cellId: number, payFromStewardship = false): CommandResult {
+  canApplyAction(actionId: string, cellId: number, payFromStewardship = false): CommandResult {
     const s = this.state;
     const def = this.content.actions.find((a) => a.id === actionId);
     if (!def) return { ok: false, error: 'unknown action' };
@@ -204,6 +222,15 @@ export class Simulation {
     }
     const purse = payFromStewardship ? s.stewardshipBudget : s.treasury;
     if (purse < def.cost) return { ok: false, error: 'cannot afford' };
+    return { ok: true };
+  }
+
+  applyAction(actionId: string, cellId: number, payFromStewardship = false): CommandResult {
+    const can = this.canApplyAction(actionId, cellId, payFromStewardship);
+    if (!can.ok) return can;
+    const s = this.state;
+    const def = this.content.actions.find((a) => a.id === actionId)!;
+    const cell = s.cells[cellId];
 
     if (payFromStewardship) s.stewardshipBudget -= def.cost;
     else s.treasury -= def.cost;
