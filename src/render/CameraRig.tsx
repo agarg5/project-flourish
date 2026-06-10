@@ -20,6 +20,8 @@ export function CameraRig() {
     cameraApi.goMacro = () => {
       ref.current?.setLookAt(0, 34, 27, 0, 0, 0, true);
     };
+    // Dev/testing handle (headless screenshots position the camera through it).
+    (window as unknown as Record<string, unknown>).__camera = ref.current;
     cameraApi.goIntimate = () => {
       // Approach from the north so the central mountain doesn't block the view.
       ref.current?.setLookAt(x + 4, 3.4, z - 6.5, x, 0.6, z, true);
