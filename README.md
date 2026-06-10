@@ -22,7 +22,7 @@ bun run fastforward  # play five strategies 600 ticks ahead, dump CSVs to tmp/
 
 TypeScript + Vite + React Three Fiber + Zustand. The simulation is pure TypeScript with no rendering dependencies — deterministic, fixed-timestep, and unit-tested headless; the 3D scene and HUD are pure consumers of its state.
 
-The full design — vision, simulation model, spatial model, data schemas, and build roadmap — lives in the numbered planning docs ([start here](00_README_START_HERE.md)).
+The full design — vision, simulation model, spatial model, data schemas, and build roadmap — lives in the numbered docs under [`planning/`](planning/) ([start here](planning/00_README_START_HERE.md)).
 
 ## Status
 
