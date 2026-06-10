@@ -27,5 +27,7 @@ The full design — vision, simulation model, spatial model, data schemas, and b
 ## Status
 
 - ✅ M0–M2: world render, dual-zoom camera, headless sim core (24 tests), live HUD
-- 🔨 M3: building placement, stewardship actions, the species-arrival payoff loop
+- ✅ M3: build & steward menu, click-to-place with validity highlighting, KayKit CC0 building models, construction grow-in, player-confirmed age-up
 - ⏳ M4–M6: tech tree and age progression UI, late-game restoration, polish + shareable deploy
+
+Building models: [KayKit Medieval Hexagon Pack](https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0) by Kay Lousberg (CC0).
