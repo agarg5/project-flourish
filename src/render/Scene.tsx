@@ -20,12 +20,20 @@ function SceneHandle() {
   return null;
 }
 
-export function Scene() {
+export function Scene({ onContextRestored }: { onContextRestored?: () => void }) {
   return (
     <Canvas
       camera={{ position: [0, 48, 38], fov: 40 }}
       shadows
       gl={{ toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
+      onCreated={({ gl }) => {
+        // preventDefault on contextlost lets the browser RESTORE the context
+        // (without it, a lost context stays lost). When it comes back, the
+        // parent remounts the canvas for a clean re-upload of GPU resources.
+        const el = gl.domElement;
+        el.addEventListener('webglcontextlost', (e) => e.preventDefault(), false);
+        el.addEventListener('webglcontextrestored', () => onContextRestored?.(), false);
+      }}
     >
       <Sky sunPosition={[60, 38, 25]} turbidity={5} rayleigh={0.4} mieCoefficient={0.004} />
       <fog attach="fog" args={['#bccab6', 75, 175]} />

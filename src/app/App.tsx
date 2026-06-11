@@ -1,4 +1,4 @@
-import { Component, useEffect } from 'react';
+import { Component, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { cameraApi } from '../render/CameraRig';
 import { Scene } from '../render/Scene';
@@ -16,27 +16,49 @@ import { startGameLoop } from './gameLoop';
 import '../ui/hud.css';
 
 // If the 3D scene crashes (e.g. WebGL context lost on a strained GPU), keep
-// the HUD alive and show a gentle notice instead of unmounting everything.
-class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+// the HUD alive and AUTO-RECOVER: remount the canvas (a fresh GL context)
+// after a short delay, with backoff. Only after repeated failures does it
+// settle into a persistent notice. The sim keeps running throughout.
+const MAX_SCENE_RETRIES = 3;
+
+class SceneBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean; generation: number; retries: number }
+> {
+  state = { failed: false, generation: 0, retries: 0 };
+
   static getDerivedStateFromError() {
     return { failed: true };
   }
+
+  componentDidCatch() {
+    if (this.state.retries < MAX_SCENE_RETRIES) {
+      const delay = 1500 * (this.state.retries + 1);
+      setTimeout(() => {
+        this.setState((s) => ({ failed: false, generation: s.generation + 1, retries: s.retries + 1 }));
+      }, delay);
+    }
+  }
+
   render() {
     if (this.state.failed) {
       return (
         <div className="scene-fallback">
-          The 3D view hit a graphics error. Your world is safe — reload the page to restore it.
+          {this.state.retries < MAX_SCENE_RETRIES
+            ? 'The 3D view hit a graphics hiccup — restoring it…'
+            : 'The 3D view could not recover from a graphics error. Your world is safe (it auto-saves). Quitting and reopening the browser usually clears this.'}
         </div>
       );
     }
-    return this.props.children;
+    return <div key={this.state.generation} style={{ position: 'absolute', inset: 0 }}>{this.props.children}</div>;
   }
 }
 
 export function App() {
   const setPlacing = useGame((g) => g.setPlacing);
   const restart = useGame((g) => g.restart);
+  // Bumped when a lost WebGL context is restored — remounts a fresh canvas.
+  const [sceneKey, setSceneKey] = useState(0);
 
   const onRestart = () => {
     if (window.confirm('Start a new world? Your current civilization will be lost.')) {
@@ -56,8 +78,8 @@ export function App() {
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <SceneBoundary>
-        <Scene />
+      <SceneBoundary key={sceneKey}>
+        <Scene onContextRestored={() => setSceneKey((k) => k + 1)} />
       </SceneBoundary>
       <div className="hud">
         <FlourishingMeter />
