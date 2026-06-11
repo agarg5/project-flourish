@@ -155,7 +155,7 @@ interface ModelCfg {
   clip?: string;
 }
 
-function AnimalModel({ cfg, seed }: { cfg: ModelCfg; seed: number }) {
+function AnimalModel({ cfg, seed, moving }: { cfg: ModelCfg; seed: number; moving: boolean }) {
   const { scene, animations } = useGLTF(cfg.path);
   // Skinned meshes must be cloned with SkeletonUtils, not plain clone.
   const cloned = useMemo(() => SkeletonUtils.clone(scene), [scene]);
@@ -163,16 +163,21 @@ function AnimalModel({ cfg, seed }: { cfg: ModelCfg; seed: number }) {
   const { actions } = useAnimations(animations, group);
 
   useEffect(() => {
-    const action = (cfg.clip ? actions[cfg.clip] : undefined) ?? Object.values(actions)[0];
+    // While the marker is travelling between cells, play the Walk clip
+    // (Quaternius models ship one); otherwise the configured idle.
+    const names = Object.keys(actions);
+    const walk = names.find((n) => /walk/i.test(n));
+    const name = moving && walk ? walk : cfg.clip && actions[cfg.clip] ? cfg.clip : names[0];
+    const action = name ? actions[name] : undefined;
     if (!action) return;
-    action.reset();
+    action.reset().fadeIn(0.25);
     // Desync individuals so two animals never move in lockstep.
-    action.time = cellHash(seed, 7) * (action.getClip().duration || 1);
+    if (!moving) action.time = cellHash(seed, 7) * (action.getClip().duration || 1);
     action.play();
     return () => {
-      action.stop();
+      action.fadeOut(0.25);
     };
-  }, [actions, cfg.clip, seed]);
+  }, [actions, cfg.clip, seed, moving]);
 
   const scale = useMemo(() => {
     const box = new THREE.Box3().setFromObject(cloned);
@@ -180,12 +185,17 @@ function AnimalModel({ cfg, seed }: { cfg: ModelCfg; seed: number }) {
     return cfg.height / Math.max(size.y, 0.001);
   }, [cloned, cfg.height]);
 
+  // Facing is owned by the marker group (it turns toward travel direction).
   return (
-    <group ref={group} rotation={[0, cellHash(seed, 11) * Math.PI * 2, 0]} scale={scale}>
+    <group ref={group} scale={scale}>
       <primitive object={cloned} />
     </group>
   );
 }
+
+// Markers walk between cells instead of teleporting when their best-habitat
+// cell changes (e.g. after the player builds something nearby).
+const WALK_SPEED = 1.6; // world units / second
 
 // One species marker. Art priority: committed model > dropped-in GLB (if
 // present) > procedural low-poly > emoji sprite.
@@ -206,6 +216,51 @@ function CreatureMarker({ sp, cell, slot, slotCount }: { sp: UISpecies; cell: UI
   const phase = strHash(sp.id, 9) * Math.PI * 2;
   const seed = cell.id * 17 + sp.id.length;
 
+  // Walk toward the (possibly new) slot position; turn to face the heading.
+  const groupRef = useRef<THREE.Group>(null);
+  const placed = useRef(false);
+  const movingRef = useRef(false);
+  const [moving, setMoving] = useState(false);
+  const tx = x + ox;
+  const tz = z + oz;
+  useFrame((_, rawDelta) => {
+    // Cap delta: after a hidden-tab pause the first frame's delta is huge and
+    // would teleport the animal — exactly what walking is meant to avoid.
+    const delta = Math.min(rawDelta, 0.1);
+    const g = groupRef.current;
+    if (!g) return;
+    if (!placed.current) {
+      // First appearance: stand at the destination, no walk-in from origin.
+      g.position.set(tx, y, tz);
+      g.rotation.y = strHash(sp.id, 3) * Math.PI * 2;
+      placed.current = true;
+      return;
+    }
+    const dx = tx - g.position.x;
+    const dy = y - g.position.y;
+    const dz = tz - g.position.z;
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (dist > 0.03) {
+      const step = Math.min(dist, WALK_SPEED * delta);
+      g.position.x += (dx / dist) * step;
+      g.position.y += (dy / dist) * step;
+      g.position.z += (dz / dist) * step;
+      if (dx * dx + dz * dz > 0.0025) {
+        // Shortest-path turn toward the heading (models face +Z at rest).
+        const desired = Math.atan2(dx, dz);
+        const diff = Math.atan2(Math.sin(desired - g.rotation.y), Math.cos(desired - g.rotation.y));
+        g.rotation.y += diff * Math.min(1, delta * 7);
+      }
+      if (!movingRef.current) {
+        movingRef.current = true;
+        setMoving(true);
+      }
+    } else if (movingRef.current) {
+      movingRef.current = false;
+      setMoving(false);
+    }
+  });
+
   const committed = ANIMAL_MODELS[sp.id];
   const optional = OPTIONAL_MODELS[sp.id];
   const optionalReady = useModelExists(optional?.path);
@@ -218,7 +273,7 @@ function CreatureMarker({ sp, cell, slot, slotCount }: { sp: UISpecies; cell: UI
     art = (
       <Suspense fallback={lowPoly ? <lowPoly.Comp phase={phase} /> : null}>
         <ContactShadow radius={cfg.height * 0.34} />
-        <AnimalModel cfg={cfg} seed={seed} />
+        <AnimalModel cfg={cfg} seed={seed} moving={moving} />
         <CountLabel population={sp.population} y={cfg.height + 0.25 + labelLift} />
       </Suspense>
     );
@@ -240,7 +295,7 @@ function CreatureMarker({ sp, cell, slot, slotCount }: { sp: UISpecies; cell: UI
     );
   }
 
-  return <group position={[x + ox, y, z + oz]}>{art}</group>;
+  return <group ref={groupRef}>{art}</group>;
 }
 
 export function Creatures() {

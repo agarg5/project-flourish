@@ -98,6 +98,7 @@ function MuteButton() {
 export function App() {
   const setPlacing = useGame((g) => g.setPlacing);
   const restart = useGame((g) => g.restart);
+  const restartCount = useGame((g) => g.restartCount);
   // Bumped when a lost WebGL context is restored — remounts a fresh canvas.
   const [sceneKey, setSceneKey] = useState(0);
 
@@ -131,7 +132,7 @@ export function App() {
         <Minimap />
         <BuildMenu />
         <TechTree />
-        <Tutorial />
+        <Tutorial key={restartCount} />
         <SoundDirector />
         <div className="camera-btns">
           <button onClick={() => cameraApi.goMacro()}>🌍 Macro</button>

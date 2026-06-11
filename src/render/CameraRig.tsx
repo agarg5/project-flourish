@@ -38,6 +38,9 @@ export function CameraRig() {
     tc.one = ACTION.TOUCH_TRUCK;
     tc.two = ACTION.TOUCH_DOLLY_TRUCK;
     tc.three = ACTION.TOUCH_TRUCK;
+    // Zoom toward the pointer (AoE/RCT feel) instead of the locked centre
+    // target — otherwise anything off-centre is impossible to zoom into.
+    cc.dollyToCursor = true;
 
     // Keep the camera target over the island.
     cc.setBoundary(
@@ -79,7 +82,7 @@ export function CameraRig() {
   return (
     <CameraControls
       ref={ref}
-      minDistance={4}
+      minDistance={3}
       maxDistance={SPAN * 2.4}
       maxPolarAngle={Math.PI / 2.15}
       smoothTime={0.4}

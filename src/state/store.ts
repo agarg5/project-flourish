@@ -185,6 +185,8 @@ interface GameStore {
   snap: UISnapshot;
   placing: Placing | null;
   hoveredCellId: number | null;
+  /** Bumped on every Restart — lets UI (tutorial) remount for the new world. */
+  restartCount: number;
   refresh: () => void;
   setSpendSplit: (split: SpendSplit) => void;
   setPlacing: (p: Placing | null) => void;
@@ -198,6 +200,7 @@ export const useGame = create<GameStore>((set, get) => ({
   snap: takeSnapshot(),
   placing: null,
   hoveredCellId: null,
+  restartCount: 0,
   refresh: () => set({ snap: takeSnapshot() }),
   setSpendSplit: (split) => {
     sim.setSpendSplit(split);
@@ -236,10 +239,17 @@ export const useGame = create<GameStore>((set, get) => ({
     sim = createSimulation(undefined, { autoStewardship: true });
     try {
       localStorage.removeItem(SAVE_KEY);
+      // A fresh world replays the tutorial (Tutorial remounts via restartCount).
+      localStorage.removeItem('flourish.tutorial.done');
     } catch {
       /* ignore */
     }
-    set({ snap: takeSnapshot(), placing: null, hoveredCellId: null });
+    set((s) => ({
+      snap: takeSnapshot(),
+      placing: null,
+      hoveredCellId: null,
+      restartCount: s.restartCount + 1,
+    }));
   },
 }));
 
