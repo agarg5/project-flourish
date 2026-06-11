@@ -41,10 +41,12 @@ export function World() {
   return (
     <Instances limit={256} castShadow receiveShadow>
       {/* thetaStart rotates the hexagon so flat edges face east-west (pointy-top
-          layout). Radius == HEX_SIZE so hexes tile exactly edge-to-edge with no
-          overlap; the shared deep base (below) keeps height-difference seams
-          closed without needing the columns to poke into each other. */}
-      <cylinderGeometry args={[HEX_SIZE, HEX_SIZE, 1, 6, 1, false, Math.PI / 6]} />
+          layout). Radius is a hair over HEX_SIZE: at exactly 1.0 the three
+          corners of a junction meet at a single point and leave pinhole gaps
+          that show sky/shadow. A small overlap seals them — and because cells
+          in a biome share one height, the overlap stays coplanar on top and
+          never produces the visible lips that height jitter used to. */}
+      <cylinderGeometry args={[HEX_SIZE * 1.04, HEX_SIZE * 1.04, 1, 6, 1, false, Math.PI / 6]} />
       <meshStandardMaterial roughness={0.95} metalness={0} />
       {items.map((c) => (
         <Instance
