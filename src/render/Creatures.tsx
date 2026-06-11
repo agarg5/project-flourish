@@ -5,7 +5,7 @@
 // floating. Each species is offset within its cell so co-located species don't
 // stack.
 
-import { Html, useAnimations, useGLTF } from '@react-three/drei';
+import { Billboard, Html, useAnimations, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -60,18 +60,47 @@ function CountLabel({ population, y }: { population: number; y: number }) {
   );
 }
 
-// A gently bobbing emoji billboard — flat sprites read as floating, so a soft
-// vertical bob + a ground shadow gives them life and weight.
-function BobbingEmoji({ emoji, phase }: { emoji: string; phase: number }) {
+// The emoji rendered to a texture so it can live as a real billboard plane IN
+// the 3D scene (proper depth + occlusion) standing on the ground — DOM overlays
+// always read as floating. Cached per emoji.
+const emojiTextureCache = new Map<string, THREE.CanvasTexture>();
+function emojiTexture(emoji: string): THREE.CanvasTexture {
+  let tex = emojiTextureCache.get(emoji);
+  if (tex) return tex;
+  const S = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = S;
+  const ctx = canvas.getContext('2d')!;
+  ctx.font = `${Math.round(S * 0.8)}px "Apple Color Emoji", "Segoe UI Emoji", serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, S / 2, S * 0.56);
+  tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
+  emojiTextureCache.set(emoji, tex);
+  return tex;
+}
+
+const SPRITE_SIZE = 0.95;
+
+// A billboard plane standing on the ground, gently bobbing — sits in the world
+// like an RCT sprite, so it reads as grounded rather than a floating sticker.
+function EmojiSprite({ emoji, phase }: { emoji: string; phase: number }) {
   const ref = useRef<THREE.Group>(null);
+  const tex = useMemo(() => emojiTexture(emoji), [emoji]);
   useFrame(({ clock }) => {
-    if (ref.current) ref.current.position.y = 0.42 + Math.sin(clock.elapsedTime * 1.8 + phase) * 0.07;
+    if (ref.current) {
+      ref.current.position.y = SPRITE_SIZE / 2 + 0.05 + Math.sin(clock.elapsedTime * 1.8 + phase) * 0.06;
+    }
   });
   return (
     <group ref={ref}>
-      <Html center sprite style={{ pointerEvents: 'none', userSelect: 'none' }}>
-        <div style={{ fontSize: 46, lineHeight: 1 }}>{emoji}</div>
-      </Html>
+      <Billboard follow lockX={false} lockZ={false}>
+        <mesh>
+          <planeGeometry args={[SPRITE_SIZE, SPRITE_SIZE]} />
+          <meshBasicMaterial map={tex} transparent depthWrite={false} alphaTest={0.4} />
+        </mesh>
+      </Billboard>
     </group>
   );
 }
@@ -139,9 +168,9 @@ export function Creatures() {
               </Suspense>
             ) : (
               <>
-                <ContactShadow radius={0.32} />
-                <BobbingEmoji emoji={sp.emoji} phase={phase} />
-                <CountLabel population={sp.population} y={0.78 + labelLift} />
+                <ContactShadow radius={0.34} />
+                <EmojiSprite emoji={sp.emoji} phase={phase} />
+                <CountLabel population={sp.population} y={SPRITE_SIZE + 0.25 + labelLift} />
               </>
             )}
           </group>
