@@ -58,18 +58,21 @@ function RockField({ path, items }: { path: string; items: RockItem[] }) {
           />
         ))}
       </Instances>
-      <Instances limit={200} castShadow frustumCulled={false}>
-        <icosahedronGeometry args={[0.5, 0]} />
-        <meshStandardMaterial color="#eef2f6" roughness={0.55} flatShading />
+      {/* Snow cap reuses the rock's OWN geometry — a white, slightly inflated,
+          vertically-squashed copy sitting on the upper third — so it drapes
+          over the same facets and reads as settled snow, not a stuck-on blob. */}
+      <Instances geometry={node.geometry} limit={200} castShadow frustumCulled={false}>
+        <meshStandardMaterial color="#f3f6fa" roughness={0.5} flatShading />
         {snowItems.map((it, i) => {
-          // Rock top = base + heightRatio scaled by sy; tuck the cap just under it.
-          const topY = it.y + (node.footY + node.heightRatio) * it.sy;
-          const capR = it.sx * 0.5;
+          const capSy = it.sy * 0.26; // a modest cap on the summit only
+          // Sit it high on the rock; inset in plan so it doesn't flare out.
+          const liftY = it.y + node.footY * capSy + node.heightRatio * it.sy * 0.72;
+          const capSx = it.sx * 0.74;
           return (
             <Instance
               key={i}
-              position={[it.x, topY - capR * 0.45, it.z]}
-              scale={[capR, capR * 0.5, capR]}
+              position={[it.x, liftY, it.z]}
+              scale={[capSx / node.unit, capSy / node.unit, capSx / node.unit]}
               rotation={[0, it.ry, 0]}
             />
           );
