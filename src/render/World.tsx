@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { DoubleSide } from 'three';
 import { useGame } from '../state/store';
 import { cellHeight } from './cellVisuals';
 import { buildTerrainGeometry } from './terrain';
@@ -25,7 +26,7 @@ export function World() {
   if (!geometry) return null;
   return (
     <mesh geometry={geometry} receiveShadow castShadow>
-      <meshStandardMaterial vertexColors roughness={0.97} metalness={0} />
+      <meshStandardMaterial vertexColors roughness={0.97} metalness={0} side={DoubleSide} />
     </mesh>
   );
 }

@@ -11,8 +11,9 @@ import { axialToWorld } from '../sim';
 import type { UICell } from '../state/store';
 import { BIOME_COLORS, cellHeight, HEX_SIZE } from './cellVisuals';
 
-const BASE_Y = -1.8;
-const SKIRT_COLOR = new THREE.Color('#5b4a38');
+const BASE_Y = -0.7;
+const SKIRT_TOP = new THREE.Color('#6b573f');
+const SKIRT_BOTTOM = new THREE.Color('#4a3a29');
 
 interface CellRender {
   x: number;
@@ -117,15 +118,22 @@ function buildSurface(cells: UICell[], opts: SurfaceOpts): THREE.BufferGeometry 
         const b = cornerIdx.get(k2)!;
         const ax = positions[a * 3], ay = positions[a * 3 + 1], az = positions[a * 3 + 2];
         const bx = positions[b * 3], by = positions[b * 3 + 1], bz = positions[b * 3 + 2];
+        // Duplicate the top-rim corners so the wall has its own (earthy)
+        // colour and a crisp crease instead of blending into the grass.
+        const ta = vi++;
+        positions.push(ax, ay, az);
+        colors.push(SKIRT_TOP.r, SKIRT_TOP.g, SKIRT_TOP.b);
+        const tb = vi++;
+        positions.push(bx, by, bz);
+        colors.push(SKIRT_TOP.r, SKIRT_TOP.g, SKIRT_TOP.b);
         const ba = vi++;
         positions.push(ax, BASE_Y, az);
-        colors.push(SKIRT_COLOR.r, SKIRT_COLOR.g, SKIRT_COLOR.b);
+        colors.push(SKIRT_BOTTOM.r, SKIRT_BOTTOM.g, SKIRT_BOTTOM.b);
         const bb = vi++;
         positions.push(bx, BASE_Y, bz);
-        colors.push(SKIRT_COLOR.r, SKIRT_COLOR.g, SKIRT_COLOR.b);
-        // Two tris for the wall quad (a, b, bb, ba), wound to face outward.
-        indices.push(a, bb, b, a, ba, bb);
-        void ay; void by;
+        colors.push(SKIRT_BOTTOM.r, SKIRT_BOTTOM.g, SKIRT_BOTTOM.b);
+        // Quad (ta, tb, bb, ba) wound CCW so the wall faces outward.
+        indices.push(ta, tb, bb, ta, bb, ba);
       }
     }
   }

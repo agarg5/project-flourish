@@ -6,7 +6,9 @@ import { Clouds, WetlandWater } from './Atmosphere';
 import { Buildings } from './Buildings';
 import { CameraRig } from './CameraRig';
 import { Creatures } from './Creatures';
-import { Decorations, MountainPeaks } from './Decorations';
+import { Decorations } from './Decorations';
+import { Mountains } from './Mountains';
+import { Trees } from './Trees';
 import { PlacementLayer } from './PlacementLayer';
 import { World } from './World';
 
@@ -42,7 +44,8 @@ export function Scene() {
       <Suspense fallback={null}>
         <World />
         <Decorations />
-        <MountainPeaks />
+        <Trees />
+        <Mountains />
         <WetlandWater />
         <Clouds />
         <Buildings />
