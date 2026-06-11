@@ -1,80 +1,110 @@
-// Mountains built from KayKit rock models (CC0) clustered and stretched into
-// craggy peaks. Snow is baked into the rock geometry as vertex colours (white
-// above a height line, grey below) so it follows the exact rock shape with no
-// intersecting "collar" artifacts and never floats. One InstancedMesh per rock
-// type keeps it cheap.
+// Mountains as procedural jagged pointed peaks. Boulder models couldn't carry
+// snow (no summit for it to sit on); a tapering faceted peak does. Each peak is
+// an irregular low-poly cone — rings of jittered radii up to a point — with
+// snow baked in as vertex colours above a height line. Because the form tapers
+// to a summit, the white cap clearly reads as snow. A few seeded geometry
+// variants are instanced, varied by scale/rotation.
 
-import { Instance, Instances, useGLTF } from '@react-three/drei';
+import { Instance, Instances } from '@react-three/drei';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { axialToWorld } from '../sim';
 import { useGame } from '../state/store';
 import { cellHash, cellHeight, HEX_SIZE, scatterInCell } from './cellVisuals';
 
-const ROCK_A = `${import.meta.env.BASE_URL}models/kaykit/rock_single_A.gltf`;
-const ROCK_C = `${import.meta.env.BASE_URL}models/kaykit/rock_single_C.gltf`;
-useGLTF.preload(ROCK_A);
-useGLTF.preload(ROCK_C);
+const ROCK_LOW = new THREE.Color('#4a4e57');   // shadowed base rock
+const ROCK_HIGH = new THREE.Color('#6f7480');  // lit upper rock
+const SNOW = new THREE.Color('#ffffff');
+const SNOW_LINE = 0.5;
+const SNOW_FULL = 0.64;
 
-const ROCK_GREY = new THREE.Color('#53565f');
-const SNOW_WHITE = new THREE.Color('#f0f4f9');
-const SNOW_LINE = 0.62; // fraction of model height where snow begins
-const SNOW_FULL = 0.8; // fully white above this fraction
-
-interface RockItem {
-  x: number;
-  y: number;
-  z: number;
-  sx: number;
-  sy: number;
-  ry: number;
+function h(seed: number, n: number): number {
+  let x = (seed + 1) * 73856093 + (n + 1) * 19349663;
+  x = (x ^ (x >> 13)) * 1274126177;
+  x = x ^ (x >> 16);
+  return ((x >>> 0) % 10000) / 10000;
 }
-
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 }
 
-function useSnowyRock(path: string) {
-  const { nodes } = useGLTF(path);
-  return useMemo(() => {
-    const mesh = Object.values(nodes).find((n): n is THREE.Mesh => (n as THREE.Mesh).isMesh)!;
-    mesh.updateWorldMatrix(true, false);
-    // Bake the node transform so geometry is Y-up object space, then add
-    // vertex colours by height for the snow line.
-    const geo = mesh.geometry.clone();
-    geo.applyMatrix4(mesh.matrixWorld);
-    geo.computeBoundingBox();
-    const box = geo.boundingBox!;
-    const minY = box.min.y;
-    const spanY = Math.max(box.max.y - minY, 1e-4);
-    const pos = geo.attributes.position;
-    const colors = new Float32Array(pos.count * 3);
-    const c = new THREE.Color();
-    for (let i = 0; i < pos.count; i++) {
-      const frac = (pos.getY(i) - minY) / spanY;
-      const snow = smoothstep(SNOW_LINE, SNOW_FULL, frac);
-      c.copy(ROCK_GREY).lerp(SNOW_WHITE, snow);
-      colors[i * 3] = c.r;
-      colors[i * 3 + 1] = c.g;
-      colors[i * 3 + 2] = c.b;
+// A peak normalized to height 1, base radius ~0.5, tapering to an apex.
+function buildPeak(seed: number): THREE.BufferGeometry {
+  const SEG = 7;
+  const rings = [
+    { y: 0.0, r: 0.6 },
+    { y: 0.38, r: 0.46 },
+    { y: 0.7, r: 0.24 },
+  ];
+  const positions: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+  const tmp = new THREE.Color();
+
+  const pushVert = (x: number, y: number, z: number) => {
+    positions.push(x, y, z);
+    const snow = smoothstep(SNOW_LINE, SNOW_FULL, y);
+    tmp.copy(ROCK_LOW).lerp(ROCK_HIGH, smoothstep(0, 0.7, y)).lerp(SNOW, snow);
+    colors.push(tmp.r, tmp.g, tmp.b);
+    return positions.length / 3 - 1;
+  };
+
+  // Ring vertices with angular + radial jitter for a jagged silhouette.
+  const ringIdx = rings.map((ring, ri) => {
+    const idx: number[] = [];
+    for (let i = 0; i < SEG; i++) {
+      const a = (i / SEG) * Math.PI * 2 + (h(seed, ri * 13 + i) - 0.5) * 0.5;
+      const rr = ring.r * (0.78 + h(seed, ri * 13 + i + 50) * 0.5);
+      const yy = ring.y + (h(seed, ri * 13 + i + 100) - 0.5) * 0.08;
+      idx.push(pushVert(Math.cos(a) * rr, yy, Math.sin(a) * rr));
     }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    const size = box.getSize(new THREE.Vector3());
-    return { geometry: geo, unit: Math.max(size.x, size.z, 1e-4), footY: -minY };
-  }, [nodes]);
+    return idx;
+  });
+  const apex = pushVert((h(seed, 900) - 0.5) * 0.1, 1, (h(seed, 901) - 0.5) * 0.1);
+
+  // Connect adjacent rings as quads.
+  for (let ri = 0; ri < rings.length - 1; ri++) {
+    const lo = ringIdx[ri];
+    const hi = ringIdx[ri + 1];
+    for (let i = 0; i < SEG; i++) {
+      const j = (i + 1) % SEG;
+      indices.push(lo[i], hi[i], lo[j]);
+      indices.push(lo[j], hi[i], hi[j]);
+    }
+  }
+  // Top ring to apex.
+  const top = ringIdx[ringIdx.length - 1];
+  for (let i = 0; i < SEG; i++) {
+    indices.push(top[i], apex, top[(i + 1) % SEG]);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
 }
 
-function RockField({ path, items }: { path: string; items: RockItem[] }) {
-  const node = useSnowyRock(path);
+interface PeakItem {
+  x: number;
+  y: number;
+  z: number;
+  w: number; // world width
+  hgt: number; // world height
+  ry: number;
+}
+
+function PeakField({ geometry, items }: { geometry: THREE.BufferGeometry; items: PeakItem[] }) {
   return (
-    <Instances geometry={node.geometry} limit={200} castShadow receiveShadow frustumCulled={false}>
-      <meshStandardMaterial vertexColors roughness={0.92} flatShading />
+    <Instances geometry={geometry} limit={120} castShadow receiveShadow frustumCulled={false}>
+      <meshStandardMaterial vertexColors roughness={0.95} flatShading />
       {items.map((it, i) => (
         <Instance
           key={i}
-          position={[it.x, it.y + node.footY * (it.sy / node.unit), it.z]}
-          scale={[it.sx / node.unit, it.sy / node.unit, it.sx / node.unit]}
+          position={[it.x, it.y, it.z]}
+          scale={[it.w, it.hgt, it.w]}
           rotation={[0, it.ry, 0]}
         />
       ))}
@@ -82,38 +112,42 @@ function RockField({ path, items }: { path: string; items: RockItem[] }) {
   );
 }
 
+const VARIANTS = 3;
+
 export function Mountains() {
   const cells = useGame((g) => g.snap.cells);
+  const geometries = useMemo(() => Array.from({ length: VARIANTS }, (_, i) => buildPeak(i + 1)), []);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const { rocksA, rocksC } = useMemo(() => {
-    const rocksA: RockItem[] = [];
-    const rocksC: RockItem[] = [];
+  const buckets = useMemo(() => {
+    const out: PeakItem[][] = Array.from({ length: VARIANTS }, () => []);
     for (const c of cells) {
       if (c.biome !== 'mountain') continue;
       const { x, z } = axialToWorld(c.q, c.r, HEX_SIZE);
       const y = cellHeight(c.id, c.biome) - 0.05;
       const isCenter = c.q === 0 && c.r === 0;
-      const lobes = 3;
-      for (let i = 0; i < lobes; i++) {
-        const main = i === 0;
-        const p = main ? { x, z } : scatterInCell(x, z, c.id, 90 + i * 4, 0.55);
-        const tall = (main ? (isCenter ? 4.6 : 3.2) : 1.8) + cellHash(c.id, 91 + i) * 1.0;
-        const wide = (main ? 1.5 : 1.05) + cellHash(c.id, 92 + i) * 0.35;
-        const item: RockItem = {
-          x: p.x, y, z: p.z, sx: wide, sy: tall,
-          ry: cellHash(c.id, 93 + i) * Math.PI * 2,
-        };
-        if (cellHash(c.id, 94 + i) < 0.5) rocksA.push(item);
-        else rocksC.push(item);
-      }
+      // One dominant peak per cell + a smaller companion, so the range reads as
+      // distinct summits rather than a cluttered pile.
+      const peaks = [
+        { main: true },
+        { main: false },
+      ];
+      peaks.forEach((pk, i) => {
+        const p = pk.main ? { x, z } : scatterInCell(x, z, c.id, 40 + i * 7, 0.5);
+        const hgt = (pk.main ? (isCenter ? 3.6 : 2.5) : 1.4) + cellHash(c.id, 41 + i) * 0.7;
+        const w = (pk.main ? 2.3 : 1.5) + cellHash(c.id, 42 + i) * 0.5;
+        const v = Math.floor(cellHash(c.id, 43 + i) * VARIANTS) % VARIANTS;
+        out[v].push({ x: p.x, y, z: p.z, w, hgt, ry: cellHash(c.id, 44 + i) * Math.PI * 2 });
+      });
     }
-    return { rocksA, rocksC };
-  }, []);
+    return out;
+  }, [geometries]);
 
   return (
     <group>
-      <RockField path={ROCK_A} items={rocksA} />
-      <RockField path={ROCK_C} items={rocksC} />
+      {geometries.map((g, i) => (
+        <PeakField key={i} geometry={g} items={buckets[i]} />
+      ))}
     </group>
   );
 }
