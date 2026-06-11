@@ -99,23 +99,25 @@ export function Creatures() {
         if (!cell) return null;
         const { x, z } = axialToWorld(cell.q, cell.r, HEX_SIZE);
         const y = cellTopY(cell.id, cell.biome);
-        // Spread co-located species to distinct spots within the cell.
+        // Spread co-located species to distinct spots within the cell, and
+        // stagger label heights so stacked markers' counts don't collide.
         const ang = strHash(sp.id, 1) * Math.PI * 2;
-        const rad = 0.3 + strHash(sp.id, 2) * 0.25;
+        const rad = 0.45 + strHash(sp.id, 2) * 0.4;
         const ox = Math.cos(ang) * rad;
         const oz = Math.sin(ang) * rad;
+        const labelLift = strHash(sp.id, 5) * 0.45;
         const model = ANIMAL_MODELS[sp.id];
         return (
           <group key={sp.id} position={[x + ox, y, z + oz]}>
             {model ? (
               <Suspense fallback={<EmojiBillboard emoji={sp.emoji} />}>
                 <AnimalModel sp={sp} seed={cell.id * 17 + sp.id.length} />
-                <CountLabel population={sp.population} y={model.height + 0.25} />
+                <CountLabel population={sp.population} y={model.height + 0.25 + labelLift} />
               </Suspense>
             ) : (
               <>
                 <EmojiBillboard emoji={sp.emoji} />
-                <CountLabel population={sp.population} y={0.68} />
+                <CountLabel population={sp.population} y={0.68 + labelLift} />
               </>
             )}
           </group>

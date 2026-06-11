@@ -8,12 +8,12 @@ import { FlourishingMeter } from '../ui/FlourishingMeter';
 import { InspectorOverlay } from '../ui/InspectorOverlay';
 import { SpendSplitControl } from '../ui/SpendSplitControl';
 import { StatusPanel } from '../ui/StatusPanel';
+import { Tutorial } from '../ui/Tutorial';
 import { startGameLoop } from './gameLoop';
 import '../ui/hud.css';
 
 export function App() {
   const setPlacing = useGame((g) => g.setPlacing);
-  const hasBuildings = useGame((g) => g.snap.buildings.length > 0);
 
   useEffect(() => {
     startGameLoop();
@@ -34,9 +34,7 @@ export function App() {
         <SpendSplitControl />
         <EventsFeed />
         <BuildMenu />
-        {!hasBuildings && (
-          <div className="onboarding">Place a Forager Camp to begin your settlement</div>
-        )}
+        <Tutorial />
         <div className="camera-btns">
           <button onClick={() => cameraApi.goMacro()}>🌍 Macro</button>
           <button onClick={() => cameraApi.goIntimate()}>🏕️ Intimate</button>
