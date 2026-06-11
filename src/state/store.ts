@@ -3,6 +3,7 @@
 // transient UI state (placement mode, hover).
 
 import { create } from 'zustand';
+import { sfxAgeUp, sfxInvalid, sfxPlace } from '../audio/sound';
 import { createSimulation } from '../sim';
 import type { SimEvent, SimState, SpendSplit, SubIndices } from '../sim';
 
@@ -214,16 +215,22 @@ export const useGame = create<GameStore>((set, get) => ({
         ? sim.placeBuilding(placing.id, cellId)
         : sim.applyAction(placing.id, cellId);
     if (res.ok) {
+      sfxPlace();
       // Keep placement mode active only if another copy is still affordable.
       const stillAffordable =
         placing.kind === 'building'
           ? sim.content.buildings.find((b) => b.id === placing.id)!.cost <= sim.state.treasury
           : sim.content.actions.find((a) => a.id === placing.id)!.cost <= sim.state.treasury;
       set({ snap: takeSnapshot(), placing: stillAffordable ? placing : null });
+    } else {
+      sfxInvalid();
     }
   },
   advanceAge: () => {
-    if (sim.advanceAge().ok) set({ snap: takeSnapshot() });
+    if (sim.advanceAge().ok) {
+      sfxAgeUp();
+      set({ snap: takeSnapshot() });
+    }
   },
   restart: () => {
     sim = createSimulation(undefined, { autoStewardship: true });

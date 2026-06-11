@@ -1,5 +1,6 @@
-import { Component, useEffect, useState } from 'react';
+import { Component, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { isMuted, setBirdLevel, setMuted, sfxArrival, sfxDeparture, sfxTech } from '../audio/sound';
 import { cameraApi } from '../render/CameraRig';
 import { Scene } from '../render/Scene';
 import { useGame } from '../state/store';
@@ -54,6 +55,46 @@ class SceneBoundary extends Component<
   }
 }
 
+// Plays cues for sim events (tech discoveries, species arrivals/departures)
+// and tunes the ambient birdsong to biodiversity. Events are diffed by object
+// identity (snapshots reuse the same event objects), so the capped feed and
+// loaded saves don't replay old sounds.
+function SoundDirector() {
+  const events = useGame((g) => g.snap.events);
+  const biodiversity = useGame((g) => g.snap.biodiversity);
+  const lastSeen = useRef<unknown>(events[events.length - 1] ?? null);
+
+  useEffect(() => {
+    setBirdLevel(biodiversity / 100);
+  }, [biodiversity]);
+
+  useEffect(() => {
+    const prev = lastSeen.current;
+    const start = prev ? events.findIndex((e) => (e as unknown) === prev) + 1 : 0;
+    for (const e of events.slice(start)) {
+      if (e.type === 'tech') sfxTech();
+      else if (e.type === 'arrival') sfxArrival();
+      else if (e.type === 'departure') sfxDeparture();
+    }
+    lastSeen.current = events[events.length - 1] ?? prev;
+  }, [events]);
+
+  return null;
+}
+
+function MuteButton() {
+  const [muted, setMutedState] = useState(isMuted);
+  const toggle = () => {
+    setMuted(!muted);
+    setMutedState(!muted);
+  };
+  return (
+    <button onClick={toggle} title={muted ? 'Unmute sound' : 'Mute sound'}>
+      {muted ? '🔇 Sound' : '🔊 Sound'}
+    </button>
+  );
+}
+
 export function App() {
   const setPlacing = useGame((g) => g.setPlacing);
   const restart = useGame((g) => g.restart);
@@ -91,9 +132,11 @@ export function App() {
         <BuildMenu />
         <TechTree />
         <Tutorial />
+        <SoundDirector />
         <div className="camera-btns">
           <button onClick={() => cameraApi.goMacro()}>🌍 Macro</button>
           <button onClick={() => cameraApi.goIntimate()}>🏕️ Intimate</button>
+          <MuteButton />
           <button className="restart-btn" onClick={onRestart} title="Start a new world">↻ Restart</button>
         </div>
       </div>
