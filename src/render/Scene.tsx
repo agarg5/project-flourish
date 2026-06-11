@@ -2,6 +2,7 @@ import { Sky } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Bloom, EffectComposer, N8AO, TiltShift2, Vignette } from '@react-three/postprocessing';
 import { Suspense } from 'react';
+import { Clouds, WetlandWater } from './Atmosphere';
 import { Buildings } from './Buildings';
 import { CameraRig } from './CameraRig';
 import { Creatures } from './Creatures';
@@ -42,6 +43,8 @@ export function Scene() {
         <World />
         <Decorations />
         <MountainPeaks />
+        <WetlandWater />
+        <Clouds />
         <Buildings />
         <Creatures />
         <PlacementLayer />
