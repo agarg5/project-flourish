@@ -1,6 +1,8 @@
 // Mountains built from KayKit rock models (CC0) clustered and stretched into
-// craggy peaks, with snow caps placed at each rock's true top. One
-// InstancedMesh per rock type keeps it cheap.
+// craggy peaks. Snow is baked into the rock geometry as vertex colours (white
+// above a height line, grey below) so it follows the exact rock shape with no
+// intersecting "collar" artifacts and never floats. One InstancedMesh per rock
+// type keeps it cheap.
 
 import { Instance, Instances, useGLTF } from '@react-three/drei';
 import { useMemo } from 'react';
@@ -14,6 +16,11 @@ const ROCK_C = `${import.meta.env.BASE_URL}models/kaykit/rock_single_C.gltf`;
 useGLTF.preload(ROCK_A);
 useGLTF.preload(ROCK_C);
 
+const ROCK_GREY = new THREE.Color('#53565f');
+const SNOW_WHITE = new THREE.Color('#f0f4f9');
+const SNOW_LINE = 0.62; // fraction of model height where snow begins
+const SNOW_FULL = 0.8; // fully white above this fraction
+
 interface RockItem {
   x: number;
   y: number;
@@ -21,64 +28,57 @@ interface RockItem {
   sx: number;
   sy: number;
   ry: number;
-  snow: boolean;
 }
 
-function useRockNode(path: string) {
-  const { nodes, materials } = useGLTF(path);
+function smoothstep(a: number, b: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+function useSnowyRock(path: string) {
+  const { nodes } = useGLTF(path);
   return useMemo(() => {
     const mesh = Object.values(nodes).find((n): n is THREE.Mesh => (n as THREE.Mesh).isMesh)!;
-    const box = new THREE.Box3().setFromObject(mesh);
+    mesh.updateWorldMatrix(true, false);
+    // Bake the node transform so geometry is Y-up object space, then add
+    // vertex colours by height for the snow line.
+    const geo = mesh.geometry.clone();
+    geo.applyMatrix4(mesh.matrixWorld);
+    geo.computeBoundingBox();
+    const box = geo.boundingBox!;
+    const minY = box.min.y;
+    const spanY = Math.max(box.max.y - minY, 1e-4);
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const c = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) {
+      const frac = (pos.getY(i) - minY) / spanY;
+      const snow = smoothstep(SNOW_LINE, SNOW_FULL, frac);
+      c.copy(ROCK_GREY).lerp(SNOW_WHITE, snow);
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     const size = box.getSize(new THREE.Vector3());
-    const unit = Math.max(size.x, size.z, 0.001);
-    return {
-      geometry: mesh.geometry,
-      material: Object.values(materials)[0] as THREE.Material,
-      unit,
-      heightRatio: Math.max(size.y, 0.001) / unit, // model height per 1u width
-      footY: -box.min.y / unit,
-    };
-  }, [nodes, materials]);
+    return { geometry: geo, unit: Math.max(size.x, size.z, 1e-4), footY: -minY };
+  }, [nodes]);
 }
 
-// Renders the rock instances AND their snow caps together, so the cap can use
-// the model's real top (footY + heightRatio) instead of a guess.
 function RockField({ path, items }: { path: string; items: RockItem[] }) {
-  const node = useRockNode(path);
-  const snowItems = items.filter((it) => it.snow);
+  const node = useSnowyRock(path);
   return (
-    <group>
-      <Instances geometry={node.geometry} material={node.material} limit={200} castShadow receiveShadow>
-        {items.map((it, i) => (
-          <Instance
-            key={i}
-            position={[it.x, it.y + node.footY * it.sy, it.z]}
-            scale={[it.sx / node.unit, it.sy / node.unit, it.sx / node.unit]}
-            rotation={[0, it.ry, 0]}
-          />
-        ))}
-      </Instances>
-      {/* Snow cap reuses the rock's OWN geometry — a white, slightly inflated,
-          vertically-squashed copy sitting on the upper third — so it drapes
-          over the same facets and reads as settled snow, not a stuck-on blob. */}
-      <Instances geometry={node.geometry} limit={200} castShadow frustumCulled={false}>
-        <meshStandardMaterial color="#f3f6fa" roughness={0.5} flatShading />
-        {snowItems.map((it, i) => {
-          const capSy = it.sy * 0.26; // a modest cap on the summit only
-          // Sit it high on the rock; inset in plan so it doesn't flare out.
-          const liftY = it.y + node.footY * capSy + node.heightRatio * it.sy * 0.72;
-          const capSx = it.sx * 0.74;
-          return (
-            <Instance
-              key={i}
-              position={[it.x, liftY, it.z]}
-              scale={[capSx / node.unit, capSy / node.unit, capSx / node.unit]}
-              rotation={[0, it.ry, 0]}
-            />
-          );
-        })}
-      </Instances>
-    </group>
+    <Instances geometry={node.geometry} limit={200} castShadow receiveShadow frustumCulled={false}>
+      <meshStandardMaterial vertexColors roughness={0.92} flatShading />
+      {items.map((it, i) => (
+        <Instance
+          key={i}
+          position={[it.x, it.y + node.footY * (it.sy / node.unit), it.z]}
+          scale={[it.sx / node.unit, it.sy / node.unit, it.sx / node.unit]}
+          rotation={[0, it.ry, 0]}
+        />
+      ))}
+    </Instances>
   );
 }
 
@@ -102,7 +102,6 @@ export function Mountains() {
         const item: RockItem = {
           x: p.x, y, z: p.z, sx: wide, sy: tall,
           ry: cellHash(c.id, 93 + i) * Math.PI * 2,
-          snow: tall > 2.0,
         };
         if (cellHash(c.id, 94 + i) < 0.5) rocksA.push(item);
         else rocksC.push(item);
