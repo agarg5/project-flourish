@@ -77,6 +77,8 @@ export const neglectPath: Strategy = {
 };
 
 // Strategy B from doc 10: steward-forward — hold habitat while growing.
+// Extends into the later ages: every economic addition is paired with
+// stewardship, the thesis playstyle.
 export const stewardForward: Strategy = {
   name: 'steward-forward',
   spendSplit: { buildings: 0.4, rnd: 0.3, stewardship: 0.3 },
@@ -91,6 +93,17 @@ export const stewardForward: Strategy = {
       if (countActions(sim, 'protect_wetland') < 1) actNearSettlement(sim, 'protect_wetland');
       if (countBuildings(sim, 'polyculture_plot') < 2) placeNearStart(sim, 'polyculture_plot');
       if (countBuildings(sim, 'irrigation_channel') < 1) placeNearStart(sim, 'irrigation_channel');
+    }
+    const ageIdx = sim.content.ages.find((a) => a.id === sim.state.age)?.index ?? 0;
+    if (ageIdx >= 2) {
+      if (countBuildings(sim, 'well') < 1) placeNearStart(sim, 'well');
+      if (countBuildings(sim, 'trade_post') < 1) placeNearStart(sim, 'trade_post');
+      if (countActions(sim, 'restore_stream') < 2) actNearSettlement(sim, 'restore_stream');
+      if (countActions(sim, 'plant_grove') < 2) actNearSettlement(sim, 'plant_grove');
+    }
+    if (ageIdx >= 3) {
+      if (countBuildings(sim, 'sawmill') < 1) placeNearStart(sim, 'sawmill');
+      if (countActions(sim, 'reforest') < 2) actNearSettlement(sim, 'reforest');
     }
   },
 };

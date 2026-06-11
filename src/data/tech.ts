@@ -40,4 +40,56 @@ export const TECHS: TechDef[] = [
     researchCost: 75, prerequisites: ['cultivation'],
     unlocks: { buildings: ['irrigation_channel'], actions: ['protect_wetland'] },
   },
+
+  // --- Bronze & Iron Age (age gate at 300 research) ---
+  {
+    id: 'bronze_working', ageId: 'bronze_iron', name: 'Bronze Working',
+    description: 'Metal shaped to purpose — better tools, better craft.',
+    researchCost: 150, prerequisites: ['polyculture'],
+    unlocks: { buildings: ['smithy'] },
+  },
+  {
+    id: 'trade_networks', ageId: 'bronze_iron', name: 'Trade Networks',
+    description: 'Paths between settlements; surplus becomes prosperity.',
+    researchCost: 200, prerequisites: ['bronze_working'],
+    unlocks: { buildings: ['trade_post'] },
+  },
+  {
+    id: 'water_management', ageId: 'bronze_iron', name: 'Water Management',
+    description: 'Wells and tended streams — clean water for people and wetlands alike.',
+    researchCost: 250, prerequisites: ['bronze_working'],
+    unlocks: { buildings: ['well'], actions: ['restore_stream'] },
+  },
+  {
+    id: 'urban_greens', ageId: 'bronze_iron', name: 'Urban Greens', isBranch: true,
+    description: 'Green commons woven through the town — the first city that breathes.',
+    researchCost: 280, prerequisites: ['trade_networks'],
+    unlocks: { actions: ['plant_grove'] },
+  },
+
+  // --- Industrial Age (age gate at 600 research) ---
+  {
+    id: 'efficient_power', ageId: 'industrial', name: 'Efficient Power',
+    description: 'Water wheels and clever gearing — more output from the same effort.',
+    researchCost: 380, prerequisites: ['water_management'],
+    unlocks: {
+      buildings: ['sawmill'],
+      modifiers: [{ target: 'economy', op: 'mul', value: 1.08, note: 'efficient power' }],
+    },
+  },
+  {
+    id: 'mass_production', ageId: 'industrial', name: 'Mass Production',
+    description: 'Scale arrives. Used carefully, it builds more than it takes.',
+    researchCost: 480, prerequisites: ['efficient_power'],
+    unlocks: { buildings: ['ore_mine'] },
+  },
+  {
+    id: 'rail_links', ageId: 'industrial', name: 'Rail Links',
+    description: 'Goods glide between regions; trade reaches everyone.',
+    researchCost: 560, prerequisites: ['mass_production'],
+    unlocks: {
+      actions: ['reforest'],
+      modifiers: [{ target: 'economy', op: 'mul', value: 1.1, note: 'rail trade reach' }],
+    },
+  },
 ];

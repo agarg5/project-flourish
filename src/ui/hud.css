@@ -177,6 +177,86 @@
 
 .eventsfeed .ev.highlight { color: #b5e48c; font-weight: 600; }
 
+.scene-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cfc9b6;
+  font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  background: #16241c;
+  text-align: center;
+  padding: 0 40px;
+}
+
+/* Tech tree */
+.techtree-toggle {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(186px);
+  pointer-events: auto;
+  background: rgba(18, 32, 24, 0.85);
+  color: #e8e4d4;
+  border: 1px solid rgba(214, 228, 200, 0.25);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.techtree-toggle:hover { background: rgba(42, 64, 48, 0.95); }
+.techtree {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 480px;
+  max-height: calc(100vh - 240px);
+  display: flex;
+  flex-direction: column;
+}
+.tt-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.tt-head h3 { margin: 0; font-size: 15px; color: #e9d8a6; }
+.tt-close {
+  pointer-events: auto;
+  background: transparent;
+  border: none;
+  color: #cfc9b6;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tt-close:hover { color: #fff; }
+.tt-scroll { overflow-y: auto; pointer-events: auto; padding-right: 4px; }
+.tt-age { margin-bottom: 10px; }
+.tt-age-name {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #b5c99a;
+  margin: 6px 0 4px;
+}
+.tt-age-locked { opacity: 0.55; }
+.tt-lock { text-transform: none; letter-spacing: 0; opacity: 0.7; }
+.tt-node {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(214, 228, 200, 0.12);
+  border-radius: 8px;
+  padding: 7px 10px;
+  margin-bottom: 5px;
+}
+.tt-node.tt-done { border-color: rgba(181, 228, 140, 0.4); }
+.tt-node-top { display: flex; justify-content: space-between; font-size: 13px; }
+.tt-name { font-weight: 600; }
+.tt-done .tt-name { color: #b5e48c; }
+.tt-branch { color: #e9d8a6; font-size: 11px; }
+.tt-cost { font-size: 11px; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.tt-desc { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+.tt-unlocks { font-size: 11px; color: #a3c585; margin-top: 3px; }
+.tt-bar { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 5px; }
+.tt-bar > div { height: 100%; border-radius: 2px; background: #95b87f; }
+
 /* Tutorial card — left of center, clear of the panels */
 .tutorial {
   position: absolute;

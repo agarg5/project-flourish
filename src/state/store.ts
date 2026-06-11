@@ -92,6 +92,7 @@ export interface UISnapshot {
   buildings: { id: string; cellId: number; builtAtTick: number }[];
   species: UISpecies[];
   events: SimEvent[];
+  unlockedTech: string[];
   placeables: UIPlaceable[];
   nextAge?: {
     name: string;
@@ -143,6 +144,7 @@ function takeSnapshot(): UISnapshot {
         };
       }),
     events: [...s.events],
+    unlockedTech: [...s.unlockedTech],
     placeables: [
       ...sim.availableBuildings().map((b) => ({
         kind: 'building' as const,

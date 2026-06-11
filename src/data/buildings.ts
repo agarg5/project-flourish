@@ -59,4 +59,62 @@ export const BUILDINGS: BuildingDef[] = [
       attractsSpecies: ['heron'],
     },
   },
+
+  // --- Bronze & Iron Age ---
+  {
+    id: 'smithy', ageId: 'bronze_iron', name: 'Smithy',
+    description: 'Bronze and iron worked into tools that make every trade better.',
+    cost: 50, upkeep: 3,
+    footprintBiomes: ['grassland', 'forest'],
+    effects: {
+      economicOutput: 14,
+      wellbeing: [{ target: 'wellbeing', op: 'add', value: 7, note: 'needs: tools & goods' }],
+      habitat: [{ suitabilityDelta: -0.18, radius: 1 }],
+    },
+  },
+  {
+    id: 'trade_post', ageId: 'bronze_iron', name: 'Trade Post',
+    description: 'A market square humming with exchange between settlements.',
+    cost: 60, upkeep: 3,
+    footprintBiomes: ['grassland'],
+    effects: {
+      economicOutput: 18,
+      wellbeing: [{ target: 'wellbeing', op: 'add', value: 6, note: 'amenity: market life' }],
+      habitat: [{ suitabilityDelta: -0.12, radius: 1 }],
+    },
+  },
+  {
+    id: 'well', ageId: 'bronze_iron', name: 'Well',
+    description: 'Clean water close to home — health for the whole settlement.',
+    cost: 30, upkeep: 1,
+    footprintBiomes: ['grassland', 'forest'],
+    effects: {
+      economicOutput: 2,
+      wellbeing: [{ target: 'wellbeing', op: 'add', value: 8, note: 'needs: clean water' }],
+    },
+  },
+
+  // --- Industrial Age ---
+  {
+    id: 'sawmill', ageId: 'industrial', name: 'Sawmill',
+    description: 'Water-powered saws; managed coppices keep the forest standing.',
+    cost: 90, upkeep: 5,
+    footprintBiomes: ['forest'],
+    effects: {
+      economicOutput: 26,
+      wellbeing: [{ target: 'wellbeing', op: 'add', value: 6, note: 'needs: lumber & warmth' }],
+      habitat: [{ suitabilityDelta: -0.2, radius: 1 }],
+    },
+  },
+  {
+    id: 'ore_mine', ageId: 'industrial', name: 'Ore Mine',
+    description: 'Metals from the mountain — the engine of the industrial leap.',
+    cost: 110, upkeep: 6,
+    footprintBiomes: ['mountain', 'grassland'],
+    effects: {
+      economicOutput: 34,
+      wellbeing: [{ target: 'wellbeing', op: 'add', value: 8, note: 'needs: goods & wages' }],
+      habitat: [{ suitabilityDelta: -0.3, radius: 1 }],
+    },
+  },
 ];

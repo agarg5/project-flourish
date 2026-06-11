@@ -17,6 +17,11 @@ const MODELS: Record<string, string> = {
   polyculture_plot: `${import.meta.env.BASE_URL}models/kaykit/building_grain.gltf`,
   granary: `${import.meta.env.BASE_URL}models/kaykit/building_windmill_red.gltf`,
   irrigation_channel: `${import.meta.env.BASE_URL}models/kaykit/building_watermill_red.gltf`,
+  smithy: `${import.meta.env.BASE_URL}models/kaykit/building_blacksmith_red.gltf`,
+  trade_post: `${import.meta.env.BASE_URL}models/kaykit/building_market_red.gltf`,
+  well: `${import.meta.env.BASE_URL}models/kaykit/building_well_red.gltf`,
+  sawmill: `${import.meta.env.BASE_URL}models/kaykit/building_lumbermill_red.gltf`,
+  ore_mine: `${import.meta.env.BASE_URL}models/kaykit/building_mine_red.gltf`,
 };
 
 for (const path of Object.values(MODELS)) useGLTF.preload(path);

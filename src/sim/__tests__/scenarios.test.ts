@@ -89,3 +89,34 @@ describe('doc 11 harness: green / neglect / balanced over 600 ticks', () => {
     }
   });
 });
+
+describe('M4: the full progression spine is playable (doc 06)', () => {
+  const long = runScenario(stewardForward, 1500);
+
+  test('steward-forward advances through Bronze and Industrial into the late ages', () => {
+    const ageIndex =
+      long.sim.content.ages.find((a) => a.id === long.sim.state.age)?.index ?? 0;
+    expect(ageIndex).toBeGreaterThanOrEqual(3); // industrial or beyond
+  });
+
+  test('late-age techs unlock their buildings and actions', () => {
+    const tech = long.sim.state.unlockedTech;
+    expect(tech).toContain('bronze_working');
+    expect(tech).toContain('efficient_power');
+    const buildings = long.sim.availableBuildings().map((b) => b.id);
+    expect(buildings).toContain('smithy');
+    expect(buildings).toContain('sawmill');
+    const actions = long.sim.availableActions().map((a) => a.id);
+    expect(actions).toContain('restore_stream');
+    expect(actions).toContain('reforest');
+  });
+
+  test('the green path keeps compounding: late-game flourishing far above the stone-age start', () => {
+    const start = long.rows[0].flourishing;
+    const end = long.rows[long.rows.length - 1].flourishing;
+    expect(end).toBeGreaterThan(start * 3);
+    // Eco multiplier stays healthy even with industrial buildings — the
+    // stewardship pairing pays for the impact.
+    expect(long.rows[long.rows.length - 1].ecoMult).toBeGreaterThan(1.3);
+  });
+});
