@@ -47,7 +47,13 @@ function useModelExists(url: string | undefined): boolean {
       setExists(cached);
       return;
     }
-    const p = (cached as Promise<boolean>) ?? fetch(url, { method: 'HEAD' }).then((r) => r.ok).catch(() => false);
+    // Dev servers answer missing paths with the SPA index.html fallback (200),
+    // so "ok" alone isn't proof the model exists — reject HTML responses.
+    const p =
+      (cached as Promise<boolean>) ??
+      fetch(url, { method: 'HEAD' })
+        .then((r) => r.ok && !(r.headers.get('content-type') ?? '').includes('text/html'))
+        .catch(() => false);
     existCache.set(url, p);
     let alive = true;
     p.then((ok) => {

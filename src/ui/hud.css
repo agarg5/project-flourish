@@ -78,9 +78,11 @@
 }
 .spend h4 { margin: 0 0 8px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.75; }
 .spend .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-.spend .row label { width: 86px; }
-.spend .row span { width: 36px; text-align: right; opacity: 0.85; }
-.spend input[type='range'] { flex: 1; accent-color: #95b87f; }
+.spend .row label { width: 80px; flex-shrink: 0; }
+.spend .row span { width: 38px; flex-shrink: 0; text-align: right; opacity: 0.85; font-variant-numeric: tabular-nums; }
+/* min-width:0 lets the range track shrink — without it the input's intrinsic
+   width pushes the % readout outside the panel */
+.spend input[type='range'] { flex: 1 1 0; min-width: 0; accent-color: #95b87f; }
 
 /* Events feed — bottom right, above the minimap */
 .eventsfeed {
