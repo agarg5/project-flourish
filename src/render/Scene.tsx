@@ -69,10 +69,10 @@ export function Scene() {
       </Suspense>
       <CameraRig />
       <EffectComposer multisampling={4}>
-        <N8AO aoRadius={0.6} intensity={1.4} distanceFalloff={1} halfRes />
+        <N8AO aoRadius={0.6} intensity={1.4} distanceFalloff={1} />
         <Bloom intensity={0.12} luminanceThreshold={0.95} mipmapBlur />
-        <TiltShift2 blur={0.1} />
-        <Vignette eskil={false} offset={0.2} darkness={0.45} />
+        <TiltShift2 blur={0.04} />
+        <Vignette eskil={false} offset={0.25} darkness={0.4} />
       </EffectComposer>
     </Canvas>
   );
