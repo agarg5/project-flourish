@@ -28,8 +28,9 @@ The full design — vision, simulation model, spatial model, data schemas, and b
 
 ## Status
 
-- ✅ M0–M2: world render, dual-zoom camera, headless sim core (24 tests), live HUD
-- ✅ M3: build & steward menu, click-to-place with validity highlighting, KayKit CC0 building models, construction grow-in, player-confirmed age-up
-- ⏳ M4–M6: tech tree and age progression UI, late-game restoration, polish + shareable deploy
+- ✅ M0–M2: world render, dual-zoom camera, headless sim core, live HUD
+- ✅ M3: build & steward menu, click-to-place, KayKit CC0 building models, construction grow-in, player-confirmed age-up
+- ✅ M4: tech tree UI + content through the Industrial age — the full progression spine is playable (save/load, restart, minimap, pannable 271-cell world along the way)
+- ⏳ M5–M6: late-game restoration (reintroduction, dead-zone terraforming), polish
 
 Building models: [KayKit Medieval Hexagon Pack](https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0) by Kay Lousberg (CC0).
