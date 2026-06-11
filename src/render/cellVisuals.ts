@@ -31,13 +31,14 @@ export function cellHash(id: number, salt: number): number {
   return ((h >>> 0) % 10000) / 10000;
 }
 
-/** Terrain column height for a cell — biome base + per-cell variation. */
-export function cellHeight(id: number, biome: string): number {
-  const base = BIOME_BASE_HEIGHTS[biome] ?? 0.3;
-  // Mountains are a constant plinth; the KayKit peak models on top provide
-  // the silhouette (tall bare columns read as buildings, not terrain).
+/** Terrain column height for a cell — constant per biome, so same-biome
+ * neighbors form one continuous surface with no lips or shadow seams between
+ * tiles (per-cell height jitter read as misaligned tiles up close). Variation
+ * comes from color jitter and decoration instead. Mountains are a constant
+ * plinth; the peak meshes on top provide the silhouette. */
+export function cellHeight(_id: number, biome: string): number {
   if (biome === 'mountain') return 0.5;
-  return base + (cellHash(id, 1) - 0.5) * 0.05;
+  return BIOME_BASE_HEIGHTS[biome] ?? 0.3;
 }
 
 /** Jittered position within a cell, keeping decorations off the rim. */
