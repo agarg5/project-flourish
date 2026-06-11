@@ -2,6 +2,8 @@
 
 > Build a civilization that flourishes *with* nature — not against it — across seven ages of technology, guided by a single **Planetary Flourishing** score that only rises when human well-being and biodiversity rise *together*.
 
+**▶ [Play it in your browser](https://agarg5.github.io/project-flourish/)** — no install, just a link.
+
 ![Project Flourish — a living hex planet](docs/screenshot.png)
 
 A calm, hopeful 3D sandbox in the browser. No clock, no fail state: shape habitat and wildlife arrives on its own; neglect nature and the economy that funds everything quietly throttles. Ecology is a multiplier, not a constraint — and the math enforces it (`Flourishing = Wellbeing × Biodiversity`).
