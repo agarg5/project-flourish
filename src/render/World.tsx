@@ -41,8 +41,10 @@ export function World() {
   return (
     <Instances limit={256} castShadow receiveShadow>
       {/* thetaStart rotates the hexagon so flat edges face east-west (pointy-top
-          layout); 1.01 overlaps neighbors so seams stay closed */}
-      <cylinderGeometry args={[HEX_SIZE * 1.01, HEX_SIZE * 1.01, 1, 6, 1, false, Math.PI / 6]} />
+          layout). Radius == HEX_SIZE so hexes tile exactly edge-to-edge with no
+          overlap; the shared deep base (below) keeps height-difference seams
+          closed without needing the columns to poke into each other. */}
+      <cylinderGeometry args={[HEX_SIZE, HEX_SIZE, 1, 6, 1, false, Math.PI / 6]} />
       <meshStandardMaterial roughness={0.95} metalness={0} />
       {items.map((c) => (
         <Instance
