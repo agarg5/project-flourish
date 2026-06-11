@@ -14,8 +14,8 @@ import { cellHash } from './cellVisuals';
 import { cellTopY, HEX_SIZE } from './World';
 
 const ANIMAL_MODELS: Record<string, { path: string; height: number; clip: string }> = {
-  deer: { path: `${import.meta.env.BASE_URL}models/quaternius/Stag.gltf`, height: 0.7, clip: 'Eating' },
-  wolf: { path: `${import.meta.env.BASE_URL}models/quaternius/Wolf.gltf`, height: 0.55, clip: 'Idle' },
+  deer: { path: `${import.meta.env.BASE_URL}models/quaternius/Stag.gltf`, height: 1.15, clip: 'Eating' },
+  wolf: { path: `${import.meta.env.BASE_URL}models/quaternius/Wolf.gltf`, height: 0.85, clip: 'Idle' },
 };
 
 for (const m of Object.values(ANIMAL_MODELS)) useGLTF.preload(m.path);
@@ -49,8 +49,8 @@ function CountLabel({ population, emoji, y }: { population: number; emoji?: stri
 
 function EmojiBillboard({ emoji }: { emoji: string }) {
   return (
-    <Html position={[0, 0.5, 0]} center sprite style={{ pointerEvents: 'none', userSelect: 'none' }}>
-      <div style={{ fontSize: 30, lineHeight: 1 }}>{emoji}</div>
+    <Html position={[0, 0.32, 0]} center sprite style={{ pointerEvents: 'none', userSelect: 'none' }}>
+      <div style={{ fontSize: 46, lineHeight: 1 }}>{emoji}</div>
     </Html>
   );
 }
@@ -115,7 +115,7 @@ export function Creatures() {
             ) : (
               <>
                 <EmojiBillboard emoji={sp.emoji} />
-                <CountLabel population={sp.population} y={0.95} />
+                <CountLabel population={sp.population} y={0.68} />
               </>
             )}
           </group>

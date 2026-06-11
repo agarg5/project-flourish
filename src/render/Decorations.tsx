@@ -20,6 +20,7 @@ interface Item {
 
 interface DecorSet {
   pines: Item[];
+  pineTops: Item[];
   canopies: Item[];
   trunks: Item[];
   reeds: Item[];
@@ -31,7 +32,7 @@ const CANOPY_SHADES = ['#5d9c4f', '#6fae5c', '#549147'];
 const TUFT_SHADES = ['#b9c46a', '#c6cf78'];
 
 function buildDecor(cells: UICell[]): DecorSet {
-  const d: DecorSet = { pines: [], canopies: [], trunks: [], reeds: [], tufts: [] };
+  const d: DecorSet = { pines: [], pineTops: [], canopies: [], trunks: [], reeds: [], tufts: [] };
 
   for (const c of cells) {
     const { x, z } = axialToWorld(c.q, c.r, HEX_SIZE);
@@ -44,9 +45,12 @@ function buildDecor(cells: UICell[]): DecorSet {
       const n = cleared ? 1 : Math.max(0, Math.round(4 * Math.min(1, c.quality / 0.75)));
       for (let i = 0; i < n; i++) {
         const p = scatterInCell(x, z, c.id, i * 7 + 2);
-        const s = 0.75 + cellHash(c.id, i * 7 + 3) * 0.6;
-        d.pines.push({ x: p.x, y: y + 0.47 * s, z: p.z, s, ry: cellHash(c.id, i) * Math.PI, color: PINE_SHADES[(c.id + i) % PINE_SHADES.length] });
-        d.trunks.push({ x: p.x, y: y + 0.11 * s, z: p.z, s, ry: 0, color: '#6b4a32' });
+        const s = 0.85 + cellHash(c.id, i * 7 + 3) * 0.6;
+        const col = PINE_SHADES[(c.id + i) % PINE_SHADES.length];
+        // Two stacked tiers read as a fuller pine than a single sharp cone.
+        d.pines.push({ x: p.x, y: y + 0.28 * s, z: p.z, s, ry: cellHash(c.id, i) * Math.PI, color: col });
+        d.pineTops.push({ x: p.x, y: y + 0.52 * s, z: p.z, s, ry: cellHash(c.id, i + 99) * Math.PI, color: col });
+        d.trunks.push({ x: p.x, y: y + 0.09 * s, z: p.z, s, ry: 0, color: '#6b4a32' });
       }
     } else if (c.biome === 'grassland') {
       if (!cleared && cellHash(c.id, 51) < 0.3) {
@@ -205,9 +209,10 @@ export function Decorations() {
 
   return (
     <group>
-      {/* pine canopy: two stacked cones feel; single cone reads fine at this scale */}
-      <DecorInstances items={d.pines} limit={600} flat geometry={<coneGeometry args={[0.22, 0.5, 6]} />} />
-      <DecorInstances items={d.trunks} limit={700} geometry={<cylinderGeometry args={[0.045, 0.06, 0.22, 5]} />} />
+      {/* two-tier pine: wider lower skirt + narrower upper tier */}
+      <DecorInstances items={d.pines} limit={600} flat geometry={<coneGeometry args={[0.3, 0.42, 7]} />} />
+      <DecorInstances items={d.pineTops} limit={600} flat geometry={<coneGeometry args={[0.2, 0.4, 7]} />} />
+      <DecorInstances items={d.trunks} limit={700} geometry={<cylinderGeometry args={[0.05, 0.07, 0.2, 5]} />} />
       <DecorInstances items={d.canopies} limit={200} flat geometry={<icosahedronGeometry args={[0.26, 0]} />} />
       {/* short bladed tufts rather than tall thin poles */}
       <DecorInstances items={d.reeds} limit={600} flat geometry={<coneGeometry args={[0.07, 0.34, 4]} />} />

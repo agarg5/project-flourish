@@ -13,14 +13,17 @@ export const BIOME_COLORS: Record<string, string> = {
   open_water: '#3f6f8f',
 };
 
+// Biomes are nearly coplanar so there are no chunky vertical cliff faces
+// between them — those exposed hex-prism sides were what read as "stacked
+// blocks". Water biomes sit a touch lower so the pond reads as recessed.
 const BIOME_BASE_HEIGHTS: Record<string, number> = {
-  forest: 0.42,
-  grassland: 0.3,
-  wetland: 0.16,
-  coast_shallow: 0.1,
-  desert: 0.24,
-  mountain: 1.0,
-  open_water: 0.05,
+  forest: 0.3,
+  grassland: 0.28,
+  wetland: 0.22,
+  coast_shallow: 0.2,
+  desert: 0.27,
+  mountain: 0.34,
+  open_water: 0.18,
 };
 
 /** Deterministic 0..1 hash from a cell id and a salt. */
@@ -37,7 +40,6 @@ export function cellHash(id: number, salt: number): number {
  * comes from color jitter and decoration instead. Mountains are a constant
  * plinth; the peak meshes on top provide the silhouette. */
 export function cellHeight(_id: number, biome: string): number {
-  if (biome === 'mountain') return 0.5;
   return BIOME_BASE_HEIGHTS[biome] ?? 0.3;
 }
 
