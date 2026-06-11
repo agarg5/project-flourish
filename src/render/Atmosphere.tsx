@@ -21,9 +21,10 @@ export function WetlandWater() {
       <meshStandardMaterial
         vertexColors
         transparent
-        opacity={0.8}
-        roughness={0.1}
-        metalness={0.15}
+        opacity={0.82}
+        roughness={0.08}
+        metalness={0.3}
+        envMapIntensity={1.4}
       />
     </mesh>
   );

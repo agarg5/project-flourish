@@ -99,7 +99,7 @@ interface PeakItem {
 function PeakField({ geometry, items }: { geometry: THREE.BufferGeometry; items: PeakItem[] }) {
   return (
     <Instances geometry={geometry} limit={120} castShadow receiveShadow frustumCulled={false}>
-      <meshStandardMaterial vertexColors roughness={0.95} flatShading />
+      <meshStandardMaterial vertexColors roughness={0.95} flatShading envMapIntensity={0} />
       {items.map((it, i) => (
         <Instance
           key={i}

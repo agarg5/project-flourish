@@ -15,6 +15,14 @@ import '../ui/hud.css';
 
 export function App() {
   const setPlacing = useGame((g) => g.setPlacing);
+  const restart = useGame((g) => g.restart);
+
+  const onRestart = () => {
+    if (window.confirm('Start a new world? Your current civilization will be lost.')) {
+      restart();
+      cameraApi.goMacro();
+    }
+  };
 
   useEffect(() => {
     startGameLoop();
@@ -40,6 +48,7 @@ export function App() {
         <div className="camera-btns">
           <button onClick={() => cameraApi.goMacro()}>🌍 Macro</button>
           <button onClick={() => cameraApi.goIntimate()}>🏕️ Intimate</button>
+          <button className="restart-btn" onClick={onRestart} title="Start a new world">↻ Restart</button>
         </div>
       </div>
     </div>

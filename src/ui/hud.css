@@ -260,3 +260,4 @@
   cursor: pointer;
 }
 .camera-btns button:hover { background: rgba(42, 64, 48, 0.95); }
+.camera-btns .restart-btn { opacity: 0.85; }

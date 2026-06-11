@@ -4,9 +4,45 @@
 
 import { create } from 'zustand';
 import { createSimulation } from '../sim';
-import type { SimEvent, SpendSplit, SubIndices } from '../sim';
+import type { SimEvent, SimState, SpendSplit, SubIndices } from '../sim';
 
-export const sim = createSimulation(undefined, { autoStewardship: true });
+// `sim` is reassignable so Restart can swap in a fresh world (ES module live
+// bindings mean importers see the new instance).
+export let sim = createSimulation(undefined, { autoStewardship: true });
+
+// --- localStorage persistence (doc 11). Bump SAVE_VERSION whenever the world
+// layout or state shape changes, so stale saves are discarded rather than
+// loaded into a mismatched world. ---
+const SAVE_KEY = 'flourish.save';
+const SAVE_VERSION = 2;
+
+function loadSaved(): void {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as { version: number; state: SimState };
+    if (parsed.version !== SAVE_VERSION) return;
+    const s = parsed.state;
+    if (!s || !Array.isArray(s.cells) || s.cells.length !== sim.state.cells.length) return;
+    Object.assign(sim.state, s); // identity preserved, contents restored
+  } catch {
+    /* corrupt save / private mode — ignore, start fresh */
+  }
+}
+
+export function saveGame(): void {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ version: SAVE_VERSION, state: sim.state }));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+loadSaved();
+if (typeof window !== 'undefined') {
+  // Auto-save a few times a minute so a closed tab doesn't lose progress.
+  setInterval(saveGame, 8000);
+}
 
 export interface UICell {
   id: number;
@@ -152,6 +188,7 @@ interface GameStore {
   setHoveredCell: (cellId: number | null) => void;
   placeAt: (cellId: number) => void;
   advanceAge: () => void;
+  restart: () => void;
 }
 
 export const useGame = create<GameStore>((set, get) => ({
@@ -185,6 +222,15 @@ export const useGame = create<GameStore>((set, get) => ({
   },
   advanceAge: () => {
     if (sim.advanceAge().ok) set({ snap: takeSnapshot() });
+  },
+  restart: () => {
+    sim = createSimulation(undefined, { autoStewardship: true });
+    try {
+      localStorage.removeItem(SAVE_KEY);
+    } catch {
+      /* ignore */
+    }
+    set({ snap: takeSnapshot(), placing: null, hoveredCellId: null });
   },
 }));
 

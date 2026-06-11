@@ -1,7 +1,8 @@
-import { Sky } from '@react-three/drei';
+import { Environment, Lightformer, Sky } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Bloom, EffectComposer, N8AO, TiltShift2, Vignette } from '@react-three/postprocessing';
 import { Suspense } from 'react';
+import { ACESFilmicToneMapping } from 'three';
 import { Clouds, WetlandWater } from './Atmosphere';
 import { Buildings } from './Buildings';
 import { CameraRig } from './CameraRig';
@@ -21,7 +22,11 @@ function SceneHandle() {
 
 export function Scene() {
   return (
-    <Canvas camera={{ position: [0, 48, 38], fov: 40 }} shadows>
+    <Canvas
+      camera={{ position: [0, 48, 38], fov: 40 }}
+      shadows
+      gl={{ toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
+    >
       <Sky sunPosition={[60, 38, 25]} turbidity={5} rayleigh={0.4} mieCoefficient={0.004} />
       <fog attach="fog" args={['#bccab6', 75, 175]} />
       <hemisphereLight args={['#cfe4ff', '#5a6b4a', 0.55]} />
@@ -33,6 +38,7 @@ export function Scene() {
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
+        shadow-normalBias={0.02}
         shadow-camera-left={-28}
         shadow-camera-right={28}
         shadow-camera-top={28}
@@ -40,6 +46,15 @@ export function Scene() {
         shadow-camera-near={1}
         shadow-camera-far={120}
       />
+      {/* Self-contained environment (no external HDR fetch) used ONLY for
+          specular reflections on shiny surfaces (water). environmentIntensity
+          near-zero so it doesn't add diffuse fill that washes the matte
+          terrain; the water material opts in via its own envMapIntensity. */}
+      <Environment resolution={128} environmentIntensity={0.04} frames={1}>
+        <color attach="background" args={['#8aa6ba']} />
+        <Lightformer intensity={1.0} color="#eaf2fa" position={[0, 6, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} />
+        <Lightformer intensity={2.2} color="#fff0d6" position={[5, 4, 3]} scale={[5, 5, 1]} />
+      </Environment>
       <SceneHandle />
       <Suspense fallback={null}>
         <World />

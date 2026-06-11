@@ -5,7 +5,8 @@
 // reads the latest state when frames resume.
 
 import { CONFIG } from '../sim';
-import { sim, useGame } from '../state/store';
+import * as store from '../state/store';
+import { useGame } from '../state/store';
 
 let started = false;
 
@@ -23,8 +24,9 @@ export function startGameLoop(): void {
     acc += now - last;
     last = now;
     let ticks = 0;
+    // `store.sim` is read live so a Restart (which swaps the instance) is picked up.
     while (acc >= TICK_MS && ticks < MAX_BURST) {
-      sim.tick();
+      store.sim.tick();
       acc -= TICK_MS;
       ticks++;
     }
@@ -33,7 +35,9 @@ export function startGameLoop(): void {
 
   // Dev/testing handle (used by Playwright checks; harmless in production).
   (window as unknown as Record<string, unknown>).__flourish = {
-    sim,
+    get sim() {
+      return store.sim;
+    },
     refresh: () => useGame.getState().refresh(),
   };
 }
