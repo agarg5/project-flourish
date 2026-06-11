@@ -36,40 +36,72 @@ function mat(color: string, flat = true) {
   return <meshStandardMaterial color={color} roughness={0.85} flatShading={flat} />;
 }
 
-// ---- Beaver: rounded body, head, paddle tail, ears ----
+// ---- Beaver: upright body, defined head with snout + teeth, paws, paddle tail ----
 export function Beaver({ phase }: AnimalProps) {
   return (
     <Idle phase={phase} amp={0.03} speed={2.2}>
-      <group scale={0.62}>
-        {/* body */}
-        <mesh position={[0, 0.34, 0]} scale={[0.7, 0.78, 0.62]} castShadow>
-          <icosahedronGeometry args={[0.5, 1]} />
+      <group scale={0.6}>
+        {/* haunches / lower body — wider at the base, sitting */}
+        <mesh position={[0, 0.28, 0]} scale={[0.78, 0.7, 0.66]} castShadow>
+          <icosahedronGeometry args={[0.5, 2]} />
           {mat(FUR)}
+        </mesh>
+        {/* chest / upper body, leaning forward a touch */}
+        <mesh position={[0, 0.58, 0.06]} scale={[0.58, 0.56, 0.52]} castShadow>
+          <icosahedronGeometry args={[0.5, 2]} />
+          {mat(FUR)}
+        </mesh>
+        {/* lighter belly patch */}
+        <mesh position={[0, 0.44, 0.34]} scale={[0.32, 0.42, 0.18]}>
+          <icosahedronGeometry args={[0.5, 2]} />
+          {mat('#c89a6a')}
         </mesh>
         {/* head */}
-        <mesh position={[0, 0.66, 0.34]} scale={[0.5, 0.46, 0.5]} castShadow>
-          <icosahedronGeometry args={[0.5, 1]} />
+        <mesh position={[0, 0.86, 0.16]} scale={[0.42, 0.4, 0.42]} castShadow>
+          <icosahedronGeometry args={[0.5, 2]} />
           {mat(FUR)}
         </mesh>
+        {/* snout */}
+        <mesh position={[0, 0.82, 0.36]} scale={[0.22, 0.2, 0.22]} castShadow>
+          <icosahedronGeometry args={[0.5, 2]} />
+          {mat(FUR_DARK)}
+        </mesh>
+        {/* nose */}
+        <mesh position={[0, 0.85, 0.47]} scale={0.05}>
+          <icosahedronGeometry args={[1, 1]} />
+          {mat('#3a2a1c', false)}
+        </mesh>
+        {/* buck teeth */}
+        <mesh position={[0, 0.76, 0.45]} scale={[0.05, 0.06, 0.02]}>
+          <boxGeometry args={[1, 1, 1]} />
+          {mat('#f3ead2', false)}
+        </mesh>
         {/* ears */}
-        {[-0.14, 0.14].map((x) => (
-          <mesh key={x} position={[x, 0.86, 0.34]} scale={0.07} castShadow>
-            <icosahedronGeometry args={[1, 0]} />
+        {[-0.16, 0.16].map((x) => (
+          <mesh key={x} position={[x, 1.04, 0.12]} scale={0.07} castShadow>
+            <icosahedronGeometry args={[1, 1]} />
             {mat(FUR_DARK)}
           </mesh>
         ))}
-        {/* paddle tail */}
-        <mesh position={[0, 0.18, -0.42]} rotation={[0.5, 0, 0]} scale={[0.34, 0.06, 0.4]} castShadow>
-          <boxGeometry args={[1, 1, 1]} />
-          {mat(FUR_DARK)}
-        </mesh>
         {/* eyes */}
-        {[-0.12, 0.12].map((x) => (
-          <mesh key={x} position={[x, 0.72, 0.56]} scale={0.04}>
-            <icosahedronGeometry args={[1, 0]} />
-            {mat('#22191100', false)}
+        {[-0.14, 0.14].map((x) => (
+          <mesh key={x} position={[x, 0.92, 0.4]} scale={0.045}>
+            <icosahedronGeometry args={[1, 1]} />
+            {mat('#241a12', false)}
           </mesh>
         ))}
+        {/* front paws */}
+        {[-0.16, 0.16].map((x) => (
+          <mesh key={x} position={[x, 0.4, 0.4]} scale={[0.1, 0.14, 0.1]} castShadow>
+            <icosahedronGeometry args={[0.5, 1]} />
+            {mat(FUR_DARK)}
+          </mesh>
+        ))}
+        {/* flat paddle tail */}
+        <mesh position={[0, 0.16, -0.46]} rotation={[0.55, 0, 0]} scale={[0.4, 0.07, 0.5]} castShadow>
+          <icosahedronGeometry args={[0.5, 1]} />
+          {mat(FUR_DARK)}
+        </mesh>
       </group>
     </Idle>
   );
