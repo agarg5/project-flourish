@@ -82,14 +82,14 @@
 .spend .row span { width: 36px; text-align: right; opacity: 0.85; }
 .spend input[type='range'] { flex: 1; accent-color: #95b87f; }
 
-/* Events feed — bottom right */
+/* Events feed — bottom right, above the minimap */
 .eventsfeed {
   position: absolute;
-  bottom: 14px;
+  bottom: 196px;
   right: 14px;
-  width: 260px;
+  width: 240px;
   font-size: 12px;
-  max-height: 170px;
+  max-height: 150px;
   overflow: hidden;
 }
 .eventsfeed .ev { opacity: 0.9; margin: 3px 0; }
@@ -219,6 +219,27 @@
   cursor: pointer;
 }
 .tut-replay:hover { background: rgba(42, 64, 48, 0.95); }
+
+/* Minimap — bottom right */
+.minimap {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  padding: 6px;
+  cursor: pointer;
+}
+.minimap canvas { display: block; border-radius: 6px; }
+.minimap-marker {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fdf6df;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
 
 /* Camera buttons */
 .camera-btns {

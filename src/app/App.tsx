@@ -6,6 +6,7 @@ import { BuildMenu } from '../ui/BuildMenu';
 import { EventsFeed } from '../ui/EventsFeed';
 import { FlourishingMeter } from '../ui/FlourishingMeter';
 import { InspectorOverlay } from '../ui/InspectorOverlay';
+import { Minimap } from '../ui/Minimap';
 import { SpendSplitControl } from '../ui/SpendSplitControl';
 import { StatusPanel } from '../ui/StatusPanel';
 import { Tutorial } from '../ui/Tutorial';
@@ -33,6 +34,7 @@ export function App() {
         <InspectorOverlay />
         <SpendSplitControl />
         <EventsFeed />
+        <Minimap />
         <BuildMenu />
         <Tutorial />
         <div className="camera-btns">

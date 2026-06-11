@@ -2,11 +2,15 @@
 // plane converts pointer position to the containing hex (no per-cell
 // raycasting needed); a translucent hex ring shows hover + validity.
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import { axialToWorld, worldToAxial } from '../sim';
 import { canPlaceAt, useGame } from '../state/store';
 import { cellHeight, HEX_SIZE } from './cellVisuals';
+
+// Below this pointer travel (px) between down and up, treat it as a tap (place);
+// beyond it, the gesture was a camera pan and we must NOT place.
+const DRAG_TOLERANCE = 6;
 
 export function PlacementLayer() {
   const cells = useGame((g) => g.snap.cells);
@@ -32,6 +36,10 @@ export function PlacementLayer() {
   const hovered = hoveredCellId != null ? cells[hoveredCellId] : null;
   const valid = placing && hovered ? canPlaceAt(placing, hovered.id) : false;
 
+  // Track where the pointer went down so we can tell a tap (place) from a drag
+  // (camera pan) — left-drag pans the map, so onClick alone would misfire.
+  const downAt = useRef<{ x: number; y: number } | null>(null);
+
   return (
     <group>
       <mesh
@@ -40,9 +48,17 @@ export function PlacementLayer() {
         visible={false}
         onPointerMove={(e) => setHoveredCell(cellFromEvent(e))}
         onPointerLeave={() => setHoveredCell(null)}
-        onClick={(e) => {
+        onPointerDown={(e) => {
+          downAt.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY };
+        }}
+        onPointerUp={(e) => {
+          const d = downAt.current;
+          downAt.current = null;
+          if (!d || !placing) return;
+          const moved = Math.hypot(e.nativeEvent.clientX - d.x, e.nativeEvent.clientY - d.y);
+          if (moved > DRAG_TOLERANCE) return; // it was a pan, not a tap
           const id = cellFromEvent(e);
-          if (id != null && placing) placeAt(id);
+          if (id != null) placeAt(id);
         }}
         onContextMenu={(e) => {
           e.nativeEvent.preventDefault();

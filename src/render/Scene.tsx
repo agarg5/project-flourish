@@ -21,24 +21,24 @@ function SceneHandle() {
 
 export function Scene() {
   return (
-    <Canvas camera={{ position: [0, 34, 27], fov: 38 }} shadows>
+    <Canvas camera={{ position: [0, 48, 38], fov: 40 }} shadows>
       <Sky sunPosition={[60, 38, 25]} turbidity={5} rayleigh={0.4} mieCoefficient={0.004} />
-      <fog attach="fog" args={['#bccab6', 60, 140]} />
+      <fog attach="fog" args={['#bccab6', 75, 175]} />
       <hemisphereLight args={['#cfe4ff', '#5a6b4a', 0.55]} />
       <ambientLight intensity={0.25} color="#f0f4e4" />
       <directionalLight
-        position={[24, 32, 14]}
+        position={[34, 44, 20]}
         intensity={2.2}
         color="#fff0d6"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
-        shadow-camera-left={-18}
-        shadow-camera-right={18}
-        shadow-camera-top={18}
-        shadow-camera-bottom={-18}
+        shadow-camera-left={-28}
+        shadow-camera-right={28}
+        shadow-camera-top={28}
+        shadow-camera-bottom={-28}
         shadow-camera-near={1}
-        shadow-camera-far={90}
+        shadow-camera-far={120}
       />
       <SceneHandle />
       <Suspense fallback={null}>
