@@ -10,11 +10,13 @@ import { axialToWorld } from '../sim';
 import { useGame } from '../state/store';
 import { cellTopY, HEX_SIZE } from './World';
 
+// Paths go through BASE_URL so they resolve when the site is served from a
+// subpath (e.g. GitHub Pages).
 const MODELS: Record<string, string> = {
-  forager_camp: '/models/kaykit/building_home_A_red.gltf',
-  polyculture_plot: '/models/kaykit/building_grain.gltf',
-  granary: '/models/kaykit/building_windmill_red.gltf',
-  irrigation_channel: '/models/kaykit/building_watermill_red.gltf',
+  forager_camp: `${import.meta.env.BASE_URL}models/kaykit/building_home_A_red.gltf`,
+  polyculture_plot: `${import.meta.env.BASE_URL}models/kaykit/building_grain.gltf`,
+  granary: `${import.meta.env.BASE_URL}models/kaykit/building_windmill_red.gltf`,
+  irrigation_channel: `${import.meta.env.BASE_URL}models/kaykit/building_watermill_red.gltf`,
 };
 
 for (const path of Object.values(MODELS)) useGLTF.preload(path);
