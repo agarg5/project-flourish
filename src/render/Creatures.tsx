@@ -1,9 +1,12 @@
 // Species markers, HoMM style: one representative creature + population count
 // at the species' best-habitat cell. Species with a CC0 Quaternius model get
-// an animated 3D representative; the rest use an emoji billboard. Each species
-// is offset within its cell by a stable hash so co-located species don't stack.
+// an animated 3D representative; the rest use an emoji billboard that gently
+// bobs. Every marker drops a soft contact shadow so it reads as grounded, not
+// floating. Each species is offset within its cell so co-located species don't
+// stack.
 
 import { Html, useAnimations, useGLTF } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { SkeletonUtils } from 'three-stdlib';
@@ -27,8 +30,18 @@ function strHash(s: string, salt: number): number {
   return ((h >>> 0) % 10000) / 10000;
 }
 
+/** Soft round shadow on the ground that anchors a marker to the terrain. */
+function ContactShadow({ radius }: { radius: number }) {
+  return (
+    <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <circleGeometry args={[radius, 20]} />
+      <meshBasicMaterial color="#0a160d" transparent opacity={0.28} depthWrite={false} />
+    </mesh>
+  );
+}
+
 /** Constant screen-size count label (no distanceFactor — stays a small nameplate). */
-function CountLabel({ population, emoji, y }: { population: number; emoji?: string; y: number }) {
+function CountLabel({ population, y }: { population: number; y: number }) {
   return (
     <Html position={[0, y, 0]} center sprite style={{ pointerEvents: 'none', userSelect: 'none' }}>
       <div
@@ -41,17 +54,25 @@ function CountLabel({ population, emoji, y }: { population: number; emoji?: stri
           whiteSpace: 'nowrap',
         }}
       >
-        {emoji ? `${emoji} ` : ''}×{population}
+        ×{population}
       </div>
     </Html>
   );
 }
 
-function EmojiBillboard({ emoji }: { emoji: string }) {
+// A gently bobbing emoji billboard — flat sprites read as floating, so a soft
+// vertical bob + a ground shadow gives them life and weight.
+function BobbingEmoji({ emoji, phase }: { emoji: string; phase: number }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (ref.current) ref.current.position.y = 0.42 + Math.sin(clock.elapsedTime * 1.8 + phase) * 0.07;
+  });
   return (
-    <Html position={[0, 0.32, 0]} center sprite style={{ pointerEvents: 'none', userSelect: 'none' }}>
-      <div style={{ fontSize: 46, lineHeight: 1 }}>{emoji}</div>
-    </Html>
+    <group ref={ref}>
+      <Html center sprite style={{ pointerEvents: 'none', userSelect: 'none' }}>
+        <div style={{ fontSize: 46, lineHeight: 1 }}>{emoji}</div>
+      </Html>
+    </group>
   );
 }
 
@@ -106,18 +127,21 @@ export function Creatures() {
         const ox = Math.cos(ang) * rad;
         const oz = Math.sin(ang) * rad;
         const labelLift = strHash(sp.id, 5) * 0.45;
+        const phase = strHash(sp.id, 9) * Math.PI * 2;
         const model = ANIMAL_MODELS[sp.id];
         return (
           <group key={sp.id} position={[x + ox, y, z + oz]}>
             {model ? (
-              <Suspense fallback={<EmojiBillboard emoji={sp.emoji} />}>
+              <Suspense fallback={null}>
+                <ContactShadow radius={model.height * 0.34} />
                 <AnimalModel sp={sp} seed={cell.id * 17 + sp.id.length} />
                 <CountLabel population={sp.population} y={model.height + 0.25 + labelLift} />
               </Suspense>
             ) : (
               <>
-                <EmojiBillboard emoji={sp.emoji} />
-                <CountLabel population={sp.population} y={0.68 + labelLift} />
+                <ContactShadow radius={0.32} />
+                <BobbingEmoji emoji={sp.emoji} phase={phase} />
+                <CountLabel population={sp.population} y={0.78 + labelLift} />
               </>
             )}
           </group>
