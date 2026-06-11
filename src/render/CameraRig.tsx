@@ -12,6 +12,7 @@ import { sim } from '../state/store';
 export const cameraApi = {
   goMacro: () => {},
   goIntimate: () => {},
+  goHome: () => {},
   jumpTo: (_x: number, _z: number) => {},
   getTarget: (): { x: number; z: number } => ({ x: 0, z: 0 }),
 };
@@ -52,6 +53,13 @@ export function CameraRig() {
     cameraApi.goIntimate = () => {
       cc.setLookAt(x + 4, 3.4, z - 6.5, x, 0.6, z, true);
     };
+    // Region scale: the settlement and its surroundings, NOT the whole island —
+    // on the big map you pan/minimap to explore (the RCT feel). South-east
+    // vantage keeps the mountain massif as a corner backdrop, roughly
+    // minimap-aligned (north ≈ up).
+    cameraApi.goHome = () => {
+      cc.setLookAt(x + 9, 13, z + 7, x, 0, z, true);
+    };
     cameraApi.jumpTo = (tx: number, tz: number) => {
       cc.setTarget(tx, 0, tz, true);
     };
@@ -61,8 +69,8 @@ export function CameraRig() {
       return { x: v.x, z: v.z };
     };
 
-    // Frame the whole island on load.
-    cc.setLookAt(2, SPAN * 1.55, SPAN * 1.25, 0, 0, 0, false);
+    // Start at region scale over the settlement; Macro is one click away.
+    cc.setLookAt(x + 9, 13, z + 7, x, 0, z, false);
 
     // Dev/testing handle (headless screenshots position the camera through it).
     (window as unknown as Record<string, unknown>).__camera = cc;

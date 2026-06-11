@@ -38,11 +38,11 @@ function useTreeNode(path: string) {
   }, [nodes, materials]);
 }
 
-function TreeInstances({ path, items, targetHeight }: { path: string; items: TreeItem[]; targetHeight: number }) {
+function TreeInstances({ path, items, targetHeight, limit }: { path: string; items: TreeItem[]; targetHeight: number; limit: number }) {
   const node = useTreeNode(path);
   const base = targetHeight / Math.max(node.modelHeight, 0.001);
   return (
-    <Instances geometry={node.geometry} material={node.material} limit={700} castShadow receiveShadow>
+    <Instances geometry={node.geometry} material={node.material} limit={limit} castShadow receiveShadow>
       {items.map((it, i) => (
         <Instance
           key={i}
@@ -92,8 +92,8 @@ export function Trees() {
 
   return (
     <group>
-      <TreeInstances path={PINE} items={pines} targetHeight={1.1} />
-      <TreeInstances path={BROADLEAF} items={broadleaf} targetHeight={0.95} />
+      <TreeInstances path={PINE} items={pines} targetHeight={1.1} limit={1600} />
+      <TreeInstances path={BROADLEAF} items={broadleaf} targetHeight={0.95} limit={800} />
     </group>
   );
 }

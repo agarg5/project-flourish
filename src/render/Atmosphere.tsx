@@ -5,6 +5,7 @@ import { Clone, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { CONFIG } from '../sim';
 import { useGame } from '../state/store';
 import { cellHash } from './cellVisuals';
 import { buildWaterGeometry } from './terrain';
@@ -35,11 +36,15 @@ const CLOUDS = [
   { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_small.gltf`, x: 4, z: 5, y: 12.5, speed: 0.3, width: 2.2 },
   { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_big.gltf`, x: 12, z: -11, y: 13, speed: 0.18, width: 2.6 },
   { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_small.gltf`, x: -7, z: 11, y: 12, speed: 0.26, width: 1.8 },
+  { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_big.gltf`, x: -2, z: 18, y: 12.8, speed: 0.2, width: 3.0 },
+  { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_small.gltf`, x: 18, z: 14, y: 11.6, speed: 0.28, width: 2.0 },
+  { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_big.gltf`, x: -20, z: -16, y: 13.4, speed: 0.16, width: 2.8 },
 ];
 
 for (const c of CLOUDS) useGLTF.preload(c.path);
 
-const DRIFT_EXTENT = 26; // wrap-around bounds, beyond the fog line
+// Wrap-around bounds: just past the island edge, whatever the world radius.
+const DRIFT_EXTENT = CONFIG.world.radius * Math.sqrt(3) + 4;
 
 function Cloud({ cfg, index }: { cfg: (typeof CLOUDS)[number]; index: number }) {
   const { scene } = useGLTF(cfg.path);

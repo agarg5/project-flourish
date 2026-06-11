@@ -104,7 +104,7 @@ export function App() {
   const onRestart = () => {
     if (window.confirm('Start a new world? Your current civilization will be lost.')) {
       restart();
-      cameraApi.goMacro();
+      cameraApi.goHome();
     }
   };
 
@@ -135,6 +135,7 @@ export function App() {
         <SoundDirector />
         <div className="camera-btns">
           <button onClick={() => cameraApi.goMacro()}>🌍 Macro</button>
+          <button onClick={() => cameraApi.goHome()} title="Back to your settlement">🏠 Home</button>
           <button onClick={() => cameraApi.goIntimate()}>🏕️ Intimate</button>
           <MuteButton />
           <button className="restart-btn" onClick={onRestart} title="Start a new world">↻ Restart</button>

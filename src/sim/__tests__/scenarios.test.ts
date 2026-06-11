@@ -35,9 +35,11 @@ describe('worked example: steward-forward vs build-heavy (doc 10)', () => {
     const aBio = A.rows[A.rows.length - 1].biodiversity;
     const bBio = B.rows[B.rows.length - 1].biodiversity;
     expect(aBio).toBeLessThan(bBio - 8);
+    // Compare the two playthroughs rather than absolute pristine fractions —
+    // the bigger the map, the less one settlement dents the GLOBAL wolf K.
     const wolf = A.sim.state.species.find((s) => s.speciesId === 'wolf')!;
-    expect(wolf.carryingCapacity).toBeLessThan(0.92 * wolf.pristineCapacity);
     const wolfB = B.sim.state.species.find((s) => s.speciesId === 'wolf')!;
+    expect(wolf.carryingCapacity).toBeLessThan(0.97 * wolfB.carryingCapacity);
     expect(wolfB.carryingCapacity).toBeGreaterThan(0.95 * wolfB.pristineCapacity);
   });
 });
@@ -56,10 +58,12 @@ describe('doc 11 harness: green / neglect / balanced over 600 ticks', () => {
   test('neglect drags the eco-multiplier toward the 1.0 crossing (nature throttles the economy)', () => {
     // Stone-age content can only degrade so far; the full below-1.0 crossing
     // is unit-tested on the curve itself (economy.test.ts) and becomes
-    // reachable in later ages. Here we lock the *relationship*.
+    // reachable in later ages. Here we lock the *relationship*. (Absolute
+    // bound re-baselined for the radius-14 world, where one stone-age
+    // settlement dents the global picture a little less.)
     const neglectMin = Math.min(...neglect.rows.map((r) => r.ecoMult));
     const greenMin = Math.min(...green.rows.map((r) => r.ecoMult));
-    expect(neglectMin).toBeLessThan(1.1);
+    expect(neglectMin).toBeLessThan(1.15);
     expect(neglectMin).toBeLessThan(greenMin - 0.2);
   });
 

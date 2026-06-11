@@ -189,12 +189,17 @@ function AnimalModel({ cfg, seed }: { cfg: ModelCfg; seed: number }) {
 
 // One species marker. Art priority: committed model > dropped-in GLB (if
 // present) > procedural low-poly > emoji sprite.
-function CreatureMarker({ sp, cell }: { sp: UISpecies; cell: UICell }) {
+function CreatureMarker({ sp, cell, slot, slotCount }: { sp: UISpecies; cell: UICell; slot: number; slotCount: number }) {
   const { x, z } = axialToWorld(cell.q, cell.r, HEX_SIZE);
   const onWater = cell.biome === 'wetland' || cell.biome === 'coast_shallow';
   const y = cellTopY(cell.id, cell.biome) + (onWater ? 0.12 : 0);
-  const ang = strHash(sp.id, 1) * Math.PI * 2;
-  const rad = 0.45 + strHash(sp.id, 2) * 0.4;
+  // Species sharing a cell get evenly-spaced slots around the centre so the
+  // animals never stand inside each other (hash-only angles can collide).
+  const ang =
+    slotCount > 1
+      ? (slot / slotCount) * Math.PI * 2 + strHash(sp.id, 1) * (Math.PI / slotCount) * 0.5
+      : strHash(sp.id, 1) * Math.PI * 2;
+  const rad = slotCount > 1 ? 0.55 + strHash(sp.id, 2) * 0.2 : 0.45 + strHash(sp.id, 2) * 0.4;
   const ox = Math.cos(ang) * rad;
   const oz = Math.sin(ang) * rad;
   const labelLift = strHash(sp.id, 5) * 0.3;
@@ -242,12 +247,30 @@ export function Creatures() {
   const snap = useGame((g) => g.snap);
   const cellById = new Map(snap.cells.map((c) => [c.id, c]));
 
+  // Which species share a marker cell (common at world start, when one prime
+  // habitat cell wins several species' markers).
+  const cellMates = new Map<number, string[]>();
+  for (const sp of snap.species) {
+    const arr = cellMates.get(sp.markerCellId) ?? [];
+    arr.push(sp.id);
+    cellMates.set(sp.markerCellId, arr);
+  }
+
   return (
     <group>
       {snap.species.map((sp) => {
         const cell = cellById.get(sp.markerCellId);
         if (!cell) return null;
-        return <CreatureMarker key={sp.id} sp={sp} cell={cell} />;
+        const mates = cellMates.get(sp.markerCellId)!;
+        return (
+          <CreatureMarker
+            key={sp.id}
+            sp={sp}
+            cell={cell}
+            slot={mates.indexOf(sp.id)}
+            slotCount={mates.length}
+          />
+        );
       })}
     </group>
   );

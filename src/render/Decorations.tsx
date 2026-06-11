@@ -43,7 +43,8 @@ function buildDecor(cells: UICell[]): DecorSet {
         d.tufts.push({ x: p.x, y: y + 0.08 * ts, z: p.z, s: ts, ry: 0, color: TUFT_SHADES[(c.id + i) % TUFT_SHADES.length] });
       }
     } else if (c.biome === 'wetland') {
-      const n = cleared ? 7 : 16;
+      // 10/cell keeps the much larger radius-14 wetland under the instance cap.
+      const n = cleared ? 5 : 10;
       for (let i = 0; i < n; i++) {
         const p = scatterInCell(x, z, c.id, 70 + i * 3, 0.78);
         const rs = 0.5 + cellHash(c.id, 71 + i) * 0.45;
@@ -92,8 +93,8 @@ export function Decorations() {
   return (
     <group>
       {/* short bladed reeds in the wetland, grass tufts on the grassland */}
-      <DecorInstances items={d.reeds} limit={1200} flat geometry={<coneGeometry args={[0.07, 0.34, 4]} />} />
-      <DecorInstances items={d.tufts} limit={500} flat geometry={<coneGeometry args={[0.09, 0.16, 5]} />} />
+      <DecorInstances items={d.reeds} limit={1400} flat geometry={<coneGeometry args={[0.07, 0.34, 4]} />} />
+      <DecorInstances items={d.tufts} limit={1100} flat geometry={<coneGeometry args={[0.09, 0.16, 5]} />} />
     </group>
   );
 }

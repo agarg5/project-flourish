@@ -49,7 +49,7 @@ export function Scene({ onContextRestored }: { onContextRestored?: () => void })
       gl={{ toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
     >
       <Sky sunPosition={[60, 38, 25]} turbidity={5} rayleigh={0.4} mieCoefficient={0.004} />
-      <fog attach="fog" args={['#bccab6', 75, 175]} />
+      <fog attach="fog" args={['#bccab6', 85, 210]} />
       <hemisphereLight args={['#cfe4ff', '#5a6b4a', 0.55]} />
       <ambientLight intensity={0.25} color="#f0f4e4" />
       <directionalLight
@@ -60,12 +60,12 @@ export function Scene({ onContextRestored }: { onContextRestored?: () => void })
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
-        shadow-camera-left={-28}
-        shadow-camera-right={28}
-        shadow-camera-top={28}
-        shadow-camera-bottom={-28}
+        shadow-camera-left={-45}
+        shadow-camera-right={45}
+        shadow-camera-top={45}
+        shadow-camera-bottom={-45}
         shadow-camera-near={1}
-        shadow-camera-far={120}
+        shadow-camera-far={160}
       />
       {/* Self-contained environment (no external HDR fetch) used ONLY for
           specular reflections on shiny surfaces (water). environmentIntensity

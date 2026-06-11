@@ -32,5 +32,6 @@ export function createWorldCells(): WorldCell[] {
   });
 }
 
-// The settlement starts on the forest-grassland boundary north of the mountain.
-export const START_QR = { q: 1, r: -4 };
+// The settlement starts near the forest-grassland boundary north of the
+// mountain, far enough out that the massif is scenery, not the whole view.
+export const START_QR = { q: 4, r: -8 };
