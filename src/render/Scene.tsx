@@ -1,7 +1,7 @@
 import { Environment, Lightformer, Sky } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { Bloom, EffectComposer, N8AO, TiltShift2, Vignette } from '@react-three/postprocessing';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { ACESFilmicToneMapping } from 'three';
 import { Clouds, WetlandWater } from './Atmosphere';
 import { Buildings } from './Buildings';
@@ -20,20 +20,33 @@ function SceneHandle() {
   return null;
 }
 
+// WebGL context-loss recovery, attached from INSIDE the canvas via an effect.
+// (Do NOT use Canvas's onCreated for this — passing onCreated silently
+// prevented R3F v9 from initializing the scene at all; that was the
+// "graphics hiccup" bug.) preventDefault on contextlost allows the browser
+// to restore the context; on restore, the parent remounts a fresh canvas.
+function ContextRecovery({ onRestored }: { onRestored?: () => void }) {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const el = gl.domElement;
+    const onLost = (e: Event) => e.preventDefault();
+    const onRestoredEv = () => onRestored?.();
+    el.addEventListener('webglcontextlost', onLost, false);
+    el.addEventListener('webglcontextrestored', onRestoredEv, false);
+    return () => {
+      el.removeEventListener('webglcontextlost', onLost);
+      el.removeEventListener('webglcontextrestored', onRestoredEv);
+    };
+  }, [gl, onRestored]);
+  return null;
+}
+
 export function Scene({ onContextRestored }: { onContextRestored?: () => void }) {
   return (
     <Canvas
       camera={{ position: [0, 48, 38], fov: 40 }}
       shadows
       gl={{ toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
-      onCreated={({ gl }) => {
-        // preventDefault on contextlost lets the browser RESTORE the context
-        // (without it, a lost context stays lost). When it comes back, the
-        // parent remounts the canvas for a clean re-upload of GPU resources.
-        const el = gl.domElement;
-        el.addEventListener('webglcontextlost', (e) => e.preventDefault(), false);
-        el.addEventListener('webglcontextrestored', () => onContextRestored?.(), false);
-      }}
     >
       <Sky sunPosition={[60, 38, 25]} turbidity={5} rayleigh={0.4} mieCoefficient={0.004} />
       <fog attach="fog" args={['#bccab6', 75, 175]} />
@@ -64,6 +77,7 @@ export function Scene({ onContextRestored }: { onContextRestored?: () => void })
         <Lightformer intensity={2.2} color="#fff0d6" position={[5, 4, 3]} scale={[5, 5, 1]} />
       </Environment>
       <SceneHandle />
+      <ContextRecovery onRestored={onContextRestored} />
       <Suspense fallback={null}>
         <World />
         <Decorations />
