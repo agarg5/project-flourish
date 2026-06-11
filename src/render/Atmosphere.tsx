@@ -5,41 +5,25 @@ import { Clone, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { axialToWorld } from '../sim';
 import { useGame } from '../state/store';
-import { cellHash, cellHeight, HEX_SIZE } from './cellVisuals';
+import { cellHash } from './cellVisuals';
+import { buildWaterGeometry } from './terrain';
 
-// Water is a SINGLE merged surface over all wetland/coast cells, not per-cell
-// translucent discs: overlapping translucent discs stack their opacity and
-// darken to near-black triangles at every 3-cell junction. One merged mesh
-// draws each pixel once, so the sheet is uniform.
+// Water is one continuous shared-vertex surface over the wetland (see
+// terrain.ts), so it reads as a single pond rather than hexagonal plates.
 export function WetlandWater() {
   const cells = useGame((g) => g.snap.cells);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const geometry = useMemo(() => {
-    const hexes = cells
-      .filter((c) => c.biome === 'wetland' || c.biome === 'coast_shallow')
-      .map((c) => {
-        const { x, z } = axialToWorld(c.q, c.r, HEX_SIZE);
-        // Flat pointy-top hexagon cap, slightly oversized to tile flush.
-        const hex = new THREE.CircleGeometry(HEX_SIZE * 1.02, 6, Math.PI / 6);
-        hex.rotateX(-Math.PI / 2);
-        hex.translate(x, cellHeight(c.id, c.biome) + 0.04, z);
-        return hex;
-      });
-    return hexes.length ? mergeGeometries(hexes) : null;
-  }, []);
-
+  const geometry = useMemo(() => buildWaterGeometry(cells), []);
   if (!geometry) return null;
   return (
     <mesh geometry={geometry} receiveShadow>
       <meshStandardMaterial
-        color="#3d8294"
+        vertexColors
         transparent
-        opacity={0.78}
-        roughness={0.12}
-        metalness={0.1}
+        opacity={0.8}
+        roughness={0.1}
+        metalness={0.15}
       />
     </mesh>
   );
