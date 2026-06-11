@@ -14,6 +14,7 @@ import { axialToWorld } from '../sim';
 import { useGame } from '../state/store';
 import type { UISpecies } from '../state/store';
 import { cellHash } from './cellVisuals';
+import { LOW_POLY_ANIMALS } from './LowPolyAnimals';
 import { cellTopY, HEX_SIZE } from './World';
 
 const ANIMAL_MODELS: Record<string, { path: string; height: number; clip: string }> = {
@@ -148,16 +149,20 @@ export function Creatures() {
         const cell = cellById.get(sp.markerCellId);
         if (!cell) return null;
         const { x, z } = axialToWorld(cell.q, cell.r, HEX_SIZE);
-        const y = cellTopY(cell.id, cell.biome);
+        // Lift critters on water cells to the surface so they wade rather than
+        // sink into the translucent water.
+        const onWater = cell.biome === 'wetland' || cell.biome === 'coast_shallow';
+        const y = cellTopY(cell.id, cell.biome) + (onWater ? 0.12 : 0);
         // Spread co-located species to distinct spots within the cell, and
         // stagger label heights so stacked markers' counts don't collide.
         const ang = strHash(sp.id, 1) * Math.PI * 2;
         const rad = 0.45 + strHash(sp.id, 2) * 0.4;
         const ox = Math.cos(ang) * rad;
         const oz = Math.sin(ang) * rad;
-        const labelLift = strHash(sp.id, 5) * 0.45;
+        const labelLift = strHash(sp.id, 5) * 0.3;
         const phase = strHash(sp.id, 9) * Math.PI * 2;
         const model = ANIMAL_MODELS[sp.id];
+        const lowPoly = LOW_POLY_ANIMALS[sp.id];
         return (
           <group key={sp.id} position={[x + ox, y, z + oz]}>
             {model ? (
@@ -166,6 +171,12 @@ export function Creatures() {
                 <AnimalModel sp={sp} seed={cell.id * 17 + sp.id.length} />
                 <CountLabel population={sp.population} y={model.height + 0.25 + labelLift} />
               </Suspense>
+            ) : lowPoly ? (
+              <>
+                <ContactShadow radius={0.3} />
+                <lowPoly.Comp phase={phase} />
+                <CountLabel population={sp.population} y={lowPoly.labelY + 0.2 + labelLift} />
+              </>
             ) : (
               <>
                 <ContactShadow radius={0.34} />
