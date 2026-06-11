@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { Buildings } from './Buildings';
 import { CameraRig } from './CameraRig';
 import { Creatures } from './Creatures';
-import { Decorations } from './Decorations';
+import { Decorations, MountainPeaks } from './Decorations';
 import { PlacementLayer } from './PlacementLayer';
 import { World } from './World';
 
@@ -41,6 +41,7 @@ export function Scene() {
       <Suspense fallback={null}>
         <World />
         <Decorations />
+        <MountainPeaks />
         <Buildings />
         <Creatures />
         <PlacementLayer />

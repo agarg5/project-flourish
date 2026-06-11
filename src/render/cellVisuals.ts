@@ -34,8 +34,10 @@ export function cellHash(id: number, salt: number): number {
 /** Terrain column height for a cell — biome base + per-cell variation. */
 export function cellHeight(id: number, biome: string): number {
   const base = BIOME_BASE_HEIGHTS[biome] ?? 0.3;
-  if (biome === 'mountain') return 0.8 + cellHash(id, 1) * 0.75; // craggy range
-  return base + (cellHash(id, 1) - 0.5) * 0.08;
+  // Mountains are a constant plinth; the KayKit peak models on top provide
+  // the silhouette (tall bare columns read as buildings, not terrain).
+  if (biome === 'mountain') return 0.5;
+  return base + (cellHash(id, 1) - 0.5) * 0.05;
 }
 
 /** Jittered position within a cell, keeping decorations off the rim. */

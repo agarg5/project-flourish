@@ -22,8 +22,6 @@ interface DecorSet {
   pines: Item[];
   canopies: Item[];
   trunks: Item[];
-  rocks: Item[];
-  snow: Item[];
   reeds: Item[];
   tufts: Item[];
 }
@@ -33,7 +31,7 @@ const CANOPY_SHADES = ['#5d9c4f', '#6fae5c', '#549147'];
 const TUFT_SHADES = ['#b9c46a', '#c6cf78'];
 
 function buildDecor(cells: UICell[]): DecorSet {
-  const d: DecorSet = { pines: [], canopies: [], trunks: [], rocks: [], snow: [], reeds: [], tufts: [] };
+  const d: DecorSet = { pines: [], canopies: [], trunks: [], reeds: [], tufts: [] };
 
   for (const c of cells) {
     const { x, z } = axialToWorld(c.q, c.r, HEX_SIZE);
@@ -64,27 +62,19 @@ function buildDecor(cells: UICell[]): DecorSet {
         d.tufts.push({ x: p.x, y: y + 0.08 * ts, z: p.z, s: ts, ry: 0, color: TUFT_SHADES[(c.id + i) % TUFT_SHADES.length] });
       }
     } else if (c.biome === 'wetland') {
-      const n = cleared ? 2 : 4;
+      const n = cleared ? 4 : 8;
       for (let i = 0; i < n; i++) {
-        const p = scatterInCell(x, z, c.id, 70 + i * 3);
-        const rs = 0.7 + cellHash(c.id, 71 + i) * 0.6;
-        d.reeds.push({ x: p.x, y: y + 0.21 * rs, z: p.z, s: rs, ry: 0, color: i % 2 ? '#3c6b50' : '#588a64' });
+        const p = scatterInCell(x, z, c.id, 70 + i * 3, 0.6);
+        const rs = 0.4 + cellHash(c.id, 71 + i) * 0.35;
+        d.reeds.push({ x: p.x, y: y + 0.13 * rs, z: p.z, s: rs, ry: 0, color: i % 2 ? '#3c6b50' : '#588a64' });
       }
       if (!cleared && cellHash(c.id, 78) < 0.25) {
         const p = scatterInCell(x, z, c.id, 79, 0.4);
         d.canopies.push({ x: p.x, y: y + 0.42 * 0.45, z: p.z, s: 0.45, ry: 0, color: '#4d8a5c' });
         d.trunks.push({ x: p.x, y: y + 0.11 * 0.45, z: p.z, s: 0.45, ry: 0, color: '#5e4631' });
       }
-    } else if (c.biome === 'mountain') {
-      const p = scatterInCell(x, z, c.id, 90, 0.35);
-      const ks = 0.5 + cellHash(c.id, 91) * 0.8;
-      d.rocks.push({ x: p.x, y: y + 0.21 * ks, z: p.z, s: ks, ry: cellHash(c.id, 92) * Math.PI, color: cellHash(c.id, 93) < 0.5 ? '#84838d' : '#75747e' });
-      // Snowcap on the taller columns reads as a proper range.
-      if (y > 1.15) {
-        const ss = 0.8 + (y - 1.15);
-        d.snow.push({ x, y: y - 0.02 + 0.25 * ss, z, s: ss, ry: cellHash(c.id, 94) * Math.PI, color: '#eef1f4' });
-      }
     }
+    // Mountain cells get KayKit peak models instead (see MountainPeaks below).
   }
   return d;
 }
@@ -114,6 +104,95 @@ function DecorInstances({
   );
 }
 
+// Procedural jagged peaks for the central range. Each peak is a low-segment
+// cone with a snow cap that shares the same segment count, rotation, and
+// squash, so the snow hugs the rock facets instead of floating as a blob.
+interface Peak {
+  x: number;
+  z: number;
+  baseY: number;
+  h: number;
+  r: number;
+  rot: number;
+  squash: number;
+  tiltX: number;
+  tiltZ: number;
+  snow: boolean;
+}
+
+const SNOW_FRACTION = 0.34;
+const PEAK_SEGMENTS = 5;
+
+function PeakMesh({ p }: { p: Peak }) {
+  const snowH = p.h * SNOW_FRACTION;
+  const snowR = p.r * SNOW_FRACTION * 1.07;
+  return (
+    <group
+      position={[p.x, p.baseY, p.z]}
+      rotation={[p.tiltX, p.rot, p.tiltZ]}
+      scale={[1, 1, p.squash]}
+    >
+      <mesh position={[0, p.h / 2, 0]} castShadow receiveShadow>
+        <coneGeometry args={[p.r, p.h, PEAK_SEGMENTS]} />
+        <meshStandardMaterial color="#8b8a94" roughness={0.95} flatShading />
+      </mesh>
+      {p.snow && (
+        <mesh position={[0, p.h * (1 - SNOW_FRACTION) + snowH / 2 - 0.01, 0]} castShadow>
+          <coneGeometry args={[snowR, snowH, PEAK_SEGMENTS]} />
+          <meshStandardMaterial color="#eef1f4" roughness={0.6} flatShading />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+export function MountainPeaks() {
+  const cells = useGame((g) => g.snap.cells);
+  // Biome layout is static; compute once.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const peaks = useMemo(() => {
+    const out: Peak[] = [];
+    for (const c of cells) {
+      if (c.biome !== 'mountain') continue;
+      const { x, z } = axialToWorld(c.q, c.r, HEX_SIZE);
+      const baseY = cellHeight(c.id, c.biome) - 0.03;
+      const isCenter = c.q === 0 && c.r === 0;
+      // Main peak — tallest at the center of the range.
+      const h = (isCenter ? 2.6 : 1.5) + cellHash(c.id, 95) * 0.7;
+      out.push({
+        x, z, baseY, h,
+        r: 0.78 + cellHash(c.id, 96) * 0.15,
+        rot: cellHash(c.id, 97) * Math.PI,
+        squash: 0.82 + cellHash(c.id, 98) * 0.18,
+        tiltX: (cellHash(c.id, 99) - 0.5) * 0.08,
+        tiltZ: (cellHash(c.id, 100) - 0.5) * 0.08,
+        snow: true,
+      });
+      // A lower shoulder peak, offset within the cell.
+      const sp = scatterInCell(x, z, c.id, 101, 0.45);
+      const sh = h * (0.45 + cellHash(c.id, 102) * 0.2);
+      out.push({
+        x: sp.x, z: sp.z, baseY, h: sh,
+        r: 0.5 + cellHash(c.id, 103) * 0.12,
+        rot: cellHash(c.id, 104) * Math.PI,
+        squash: 0.85 + cellHash(c.id, 105) * 0.15,
+        tiltX: (cellHash(c.id, 106) - 0.5) * 0.12,
+        tiltZ: (cellHash(c.id, 107) - 0.5) * 0.12,
+        snow: sh > 1.2,
+      });
+    }
+    return out;
+  }, []);
+
+  return (
+    <group>
+      {peaks.map((p, i) => (
+        <PeakMesh key={i} p={p} />
+      ))}
+    </group>
+  );
+}
+
 export function Decorations() {
   const cells = useGame((g) => g.snap.cells);
   // Rebuild only when something visible changes (quality moves slowly).
@@ -130,9 +209,8 @@ export function Decorations() {
       <DecorInstances items={d.pines} limit={600} flat geometry={<coneGeometry args={[0.22, 0.5, 6]} />} />
       <DecorInstances items={d.trunks} limit={700} geometry={<cylinderGeometry args={[0.045, 0.06, 0.22, 5]} />} />
       <DecorInstances items={d.canopies} limit={200} flat geometry={<icosahedronGeometry args={[0.26, 0]} />} />
-      <DecorInstances items={d.rocks} limit={100} flat geometry={<coneGeometry args={[0.28, 0.42, 4]} />} />
-      <DecorInstances items={d.snow} limit={100} flat geometry={<coneGeometry args={[0.55, 0.5, 6]} />} />
-      <DecorInstances items={d.reeds} limit={300} geometry={<cylinderGeometry args={[0.018, 0.028, 0.42, 4]} />} />
+      {/* short bladed tufts rather than tall thin poles */}
+      <DecorInstances items={d.reeds} limit={600} flat geometry={<coneGeometry args={[0.07, 0.34, 4]} />} />
       <DecorInstances items={d.tufts} limit={500} flat geometry={<coneGeometry args={[0.09, 0.16, 5]} />} />
     </group>
   );

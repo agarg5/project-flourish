@@ -21,7 +21,7 @@ const MODELS: Record<string, string> = {
 
 for (const path of Object.values(MODELS)) useGLTF.preload(path);
 
-const TARGET_FOOTPRINT = 1.35; // world units across — fits inside a hex cell
+const TARGET_FOOTPRINT = 1.5; // world units across — fits inside a hex cell
 
 /** Scale-in ease for newly built structures (frame-rate smooth). */
 function GrowIn({ children }: { children: React.ReactNode }) {
