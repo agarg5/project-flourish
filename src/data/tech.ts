@@ -93,25 +93,72 @@ export const TECHS: TechDef[] = [
     },
   },
 
-  // --- Late-age stewardship spine (doc 12). Full Modern/Synergy/Stewardship
-  // content lands in M5/Phase 3; these are the restoration capstones:
-  // rail_links -> restoration_ecology -> rewilding -> terraforming. ---
+  // --- Modern Age (age gate at 1000 research): healing becomes possible. ---
   {
-    id: 'restoration_ecology', ageId: 'modern', name: 'Restoration Ecology',
+    id: 'renewables', ageId: 'modern', name: 'Renewables',
+    description: 'Sun and wind — power without a smokestack, and meadows beneath the panels.',
+    researchCost: 1050, prerequisites: ['rail_links'],
+    unlocks: {
+      buildings: ['solar_array'],
+      modifiers: [{ target: 'economy', op: 'mul', value: 1.08, note: 'cheap clean power' }],
+    },
+  },
+  {
+    id: 'green_building', ageId: 'modern', name: 'Green Building',
+    description: 'Living roofs, walls, and corridors woven into how we build.',
+    researchCost: 1200, prerequisites: ['renewables'],
+    unlocks: { buildings: ['green_tower'] },
+  },
+  {
+    id: 'restoration_ecology', ageId: 'modern', name: 'Restoration Ecology', isBranch: true,
     description: 'The science of healing ecosystems — and of bringing back what was lost.',
-    researchCost: 950, prerequisites: ['rail_links'],
-    unlocks: { actions: ['reintroduce_lynx'] },
+    researchCost: 1100, prerequisites: ['renewables'],
+    unlocks: { actions: ['reintroduce_lynx', 'wildlife_corridor'] },
+  },
+
+  // --- Synergy Age (age gate at 1600 research): humanity becomes keystone-capable. ---
+  {
+    id: 'living_architecture', ageId: 'synergy', name: 'Living Architecture',
+    description: 'Buildings grown, not just built — structures that are themselves habitat.',
+    researchCost: 1700, prerequisites: ['green_building'],
+    unlocks: { buildings: ['living_building'] },
   },
   {
-    id: 'rewilding', ageId: 'synergy', name: 'Rewilding',
+    id: 'circular_economy', ageId: 'synergy', name: 'Circular Economy',
+    description: 'Nothing wasted — vertical farms and closed loops feed the city and free the land.',
+    researchCost: 1900, prerequisites: ['living_architecture'],
+    unlocks: {
+      buildings: ['vertical_farm'],
+      modifiers: [{ target: 'economy', op: 'mul', value: 1.1, note: 'closed-loop efficiency' }],
+    },
+  },
+  {
+    id: 'rewilding', ageId: 'synergy', name: 'Rewilding', isBranch: true,
     description: 'Let large wild systems run themselves again — keystones returned, the land set free.',
-    researchCost: 1500, prerequisites: ['restoration_ecology'],
-    unlocks: { actions: ['reintroduce_bison'] },
+    researchCost: 1800, prerequisites: ['restoration_ecology'],
+    unlocks: { actions: ['reintroduce_bison', 'rewild_landscape'] },
+  },
+
+  // --- Stewardship Age (age gate at 2400 research): the planet more alive than we found it. ---
+  {
+    id: 'fusion_power', ageId: 'stewardship', name: 'Fusion Power',
+    description: 'Clean, abundant energy — the foundation of a post-scarcity, low-impact world.',
+    researchCost: 2500, prerequisites: ['circular_economy'],
+    unlocks: {
+      buildings: ['fusion_plant'],
+      modifiers: [{ target: 'economy', op: 'mul', value: 1.15, note: 'limitless clean energy' }],
+    },
   },
   {
-    id: 'terraforming', ageId: 'stewardship', name: 'Terraforming',
+    id: 'arcology_design', ageId: 'stewardship', name: 'Arcology Design',
+    description: 'Whole cities in living structures — dense and green, wilderness all around.',
+    researchCost: 2750, prerequisites: ['fusion_power'],
+    unlocks: { buildings: ['arcology'] },
+  },
+  {
+    id: 'terraforming', ageId: 'stewardship', name: 'Terraforming', isBranch: true,
     description: 'Bring dead land back to life — greened deserts and new oases that hold more life than before.',
-    researchCost: 2400, prerequisites: ['rewilding'],
+    researchCost: 2500, prerequisites: ['rewilding'],
     unlocks: { actions: ['green_desert', 'create_oasis'] },
   },
 ];

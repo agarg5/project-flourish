@@ -71,4 +71,24 @@ export const SPECIES: SpeciesDef[] = [
     reintroOnly: true, ageAvailableFrom: 'synergy',
     uiEmoji: '🦬', uiColor: '#6e5238',
   },
+
+  // --- Late-age natural arrivals (doc 12 Phase 3): they recolonise on their own
+  // once the world has healed enough to support them — the reward for restoring
+  // water and connectivity in the later ages. ---
+  {
+    id: 'otter', name: 'Eurasian Otter', isKeystone: false,
+    niches: ['filter_feeder'],
+    preferredBiomes: ['coast_shallow', 'wetland'],
+    arrivalThreshold: 0.5, baseCarryingCapacity: 70 / 40,
+    ageAvailableFrom: 'modern',
+    uiEmoji: '🦦', uiColor: '#6b4f3a',
+  },
+  {
+    id: 'crane', name: 'Common Crane', isKeystone: false,
+    niches: ['seed_disperser'],
+    preferredBiomes: ['wetland', 'grassland'],
+    arrivalThreshold: 0.5, baseCarryingCapacity: 90 / 40,
+    ageAvailableFrom: 'synergy',
+    uiEmoji: '🦩', uiColor: '#c9b9a8',
+  },
 ];

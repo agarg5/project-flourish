@@ -117,4 +117,87 @@ export const BUILDINGS: BuildingDef[] = [
       habitat: [{ suitabilityDelta: -0.3, radius: 1 }],
     },
   },
+
+  // --- Modern Age: the turn toward healing. Power and housing that give back
+  // to the land rather than taking from it (doc 02 section 5; doc 12 Phase 3). ---
+  {
+    id: 'solar_array', ageId: 'modern', name: 'Solar Array',
+    description: 'Pollinator-friendly solar meadows — clean power and wildflowers in the same field.',
+    cost: 130, upkeep: 3,
+    footprintBiomes: ['grassland'],
+    effects: {
+      economicOutput: 22,
+      wellbeing: [{ target: 'wellbeing', op: 'add', value: 6, note: 'needs: clean power' }],
+      habitat: [{ suitabilityDelta: 0.02, radius: 1, note: 'solar meadow aids pollinators' }],
+      attractsSpecies: ['wild_bee'],
+    },
+  },
+  {
+    id: 'green_tower', ageId: 'modern', name: 'Green Tower',
+    description: 'Green-roofed mixed-use housing — homes wrapped in living walls.',
+    cost: 150, upkeep: 4,
+    footprintBiomes: ['grassland', 'forest'],
+    effects: {
+      economicOutput: 16,
+      wellbeing: [
+        { target: 'wellbeing', op: 'add', value: 9, note: 'amenity: light, green, walkable' },
+        { target: 'wellbeing', op: 'add', value: 4, note: 'needs: dense housing' },
+      ],
+      habitat: [{ suitabilityDelta: 0.05, radius: 1, note: 'living roofs and walls' }],
+    },
+  },
+
+  // --- Synergy Age: cities that are habitats. Humanity becomes keystone-capable. ---
+  {
+    id: 'living_building', ageId: 'synergy', name: 'Living Building',
+    description: 'Grown from mycelium and timber — the structure itself is habitat.',
+    cost: 180, upkeep: 2,
+    footprintBiomes: ['grassland', 'forest', 'wetland'],
+    effects: {
+      economicOutput: 22,
+      wellbeing: [
+        { target: 'wellbeing', op: 'add', value: 11, note: 'amenity: biophilic living' },
+        { target: 'wellbeing', op: 'add', value: 5, note: 'needs: self-sustaining homes' },
+      ],
+      habitat: [{ suitabilityDelta: 0.08, radius: 1, note: 'the building is habitat' }],
+    },
+  },
+  {
+    id: 'vertical_farm', ageId: 'synergy', name: 'Vertical Farm',
+    description: 'Stacked, soil-light food production — feeds the city and frees the land around it.',
+    cost: 200, upkeep: 4,
+    footprintBiomes: ['grassland'],
+    effects: {
+      economicOutput: 30,
+      wellbeing: [{ target: 'wellbeing', op: 'add', value: 9, note: 'needs: abundant food' }],
+      habitat: [{ suitabilityDelta: 0.03, radius: 2, note: 'releases farmland back to nature' }],
+    },
+  },
+
+  // --- Stewardship Age: abundance with a lighter footprint than ever. ---
+  {
+    id: 'fusion_plant', ageId: 'stewardship', name: 'Fusion Plant',
+    description: 'Clean, abundant energy — the foundation of a post-scarcity, low-impact economy.',
+    cost: 300, upkeep: 6,
+    footprintBiomes: ['grassland', 'mountain'],
+    effects: {
+      economicOutput: 50,
+      wellbeing: [{ target: 'wellbeing', op: 'add', value: 12, note: 'needs: limitless clean energy' }],
+      habitat: [{ suitabilityDelta: 0, radius: 0 }],
+    },
+  },
+  {
+    id: 'arcology', ageId: 'stewardship', name: 'Arcology',
+    description: 'A whole city in a living structure — dense, green, and surrounded by wilderness.',
+    cost: 350, upkeep: 5,
+    footprintBiomes: ['grassland'],
+    effects: {
+      economicOutput: 45,
+      wellbeing: [
+        { target: 'wellbeing', op: 'add', value: 15, note: 'amenity: the 15-minute city' },
+        { target: 'wellbeing', op: 'add', value: 9, note: 'needs: everything within reach' },
+      ],
+      habitat: [{ suitabilityDelta: 0.06, radius: 2, note: 'concentrates people, frees the land' }],
+    },
+  },
 ];
