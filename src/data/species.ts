@@ -47,4 +47,28 @@ export const SPECIES: SpeciesDef[] = [
     arrivalThreshold: 0.55, baseCarryingCapacity: 40 / 70,
     uiEmoji: '🐺', uiColor: '#9aa0a8',
   },
+
+  // --- Reintroduction-only species (doc 12 Phase 2): locally extinct with no
+  // source population, so they never arrive on their own. A late-age
+  // stewardship act brings them back, and only into habitat already restored
+  // for them. The bison is the world's second keystone. ---
+  {
+    id: 'lynx', name: 'Eurasian Lynx', isKeystone: false,
+    niches: ['predator_balancer'],
+    preferredBiomes: ['forest', 'mountain'],
+    arrivalThreshold: 0.5, baseCarryingCapacity: 35 / 70,
+    reintroOnly: true, ageAvailableFrom: 'modern',
+    uiEmoji: '🐈', uiColor: '#b59b6a',
+  },
+  {
+    id: 'bison', name: 'European Bison', isKeystone: true,
+    niches: ['grazer', 'soil_engineer'],
+    preferredBiomes: ['grassland', 'forest'],
+    arrivalThreshold: 0.45, baseCarryingCapacity: 50 / 40,
+    keystoneBoost: 0.35,
+    supportsNiches: ['pollinator', 'seed_disperser'],
+    cascadeThreshold: 0.4,
+    reintroOnly: true, ageAvailableFrom: 'synergy',
+    uiEmoji: '🦬', uiColor: '#6e5238',
+  },
 ];

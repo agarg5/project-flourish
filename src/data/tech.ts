@@ -93,12 +93,25 @@ export const TECHS: TechDef[] = [
     },
   },
 
-  // --- Stewardship Age (age gate at 2400 research). Full late-age spine lands
-  // in M5/Phase 3; this is the terraforming capstone (doc 12). ---
+  // --- Late-age stewardship spine (doc 12). Full Modern/Synergy/Stewardship
+  // content lands in M5/Phase 3; these are the restoration capstones:
+  // rail_links -> restoration_ecology -> rewilding -> terraforming. ---
+  {
+    id: 'restoration_ecology', ageId: 'modern', name: 'Restoration Ecology',
+    description: 'The science of healing ecosystems — and of bringing back what was lost.',
+    researchCost: 950, prerequisites: ['rail_links'],
+    unlocks: { actions: ['reintroduce_lynx'] },
+  },
+  {
+    id: 'rewilding', ageId: 'synergy', name: 'Rewilding',
+    description: 'Let large wild systems run themselves again — keystones returned, the land set free.',
+    researchCost: 1500, prerequisites: ['restoration_ecology'],
+    unlocks: { actions: ['reintroduce_bison'] },
+  },
   {
     id: 'terraforming', ageId: 'stewardship', name: 'Terraforming',
     description: 'Bring dead land back to life — greened deserts and new oases that hold more life than before.',
-    researchCost: 2400, prerequisites: ['rail_links'],
+    researchCost: 2400, prerequisites: ['rewilding'],
     unlocks: { actions: ['green_desert', 'create_oasis'] },
   },
 ];

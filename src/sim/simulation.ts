@@ -11,7 +11,7 @@ import { computeCapacitiesAndMarkers, stepPopulations } from './ecosystem';
 import { recomputeHabitat, settlementQuality, suitability } from './habitat';
 import { hexDistance } from './hex';
 import type {
-  ActionDef, BuildingDef, Content, SimState, SpendSplit, WorldCell,
+  ActionDef, BuildingDef, Content, SimState, SpeciesDef, SpendSplit, WorldCell,
 } from './types';
 import { computeWellbeing } from './wellbeing';
 import { clamp01, pushEvent } from './util';
@@ -53,7 +53,9 @@ export class Simulation {
         carryingCapacity: 0,
         pristineCapacity: 0,
         arrivalProgress: 0,
-        keystoneEffectiveness: 1,
+        // A never-present reintroduction-only keystone projects nothing until
+        // it is brought back; the rest start at the pristine world's full health.
+        keystoneEffectiveness: sp.reintroOnly ? 0 : 1,
         markerCellIds: [],
       })),
       unlockedTech: ['fire', 'tools'],
@@ -226,6 +228,15 @@ export class Simulation {
     if (this.content.biomes[cell.biome]?.isDeadZone && def.kind !== 'terraform') {
       return { ok: false, error: 'dead zone' };
     }
+    // Reintroduction is rare and earned: a species can only be brought back if
+    // it is locally absent AND its habitat is already ready to receive it.
+    // Checked before the per-cell guard so it reports the species-level reason.
+    if (def.effects.reintroduceSpecies) {
+      const target = s.species.find((st) => st.speciesId === def.effects.reintroduceSpecies);
+      if (!target) return { ok: false, error: 'unknown species' };
+      if (target.population > 0) return { ok: false, error: 'already present' };
+      if (target.carryingCapacity < CONFIG.extinctionFloor) return { ok: false, error: 'habitat not ready' };
+    }
     if ((s.cellActions[cellId] ?? []).includes(actionId)) {
       return { ok: false, error: 'already applied here' };
     }
@@ -267,7 +278,19 @@ export class Simulation {
       s.placedEffects.push({ originCellId: cellId, sourceId: def.id, effects: def.effects.habitat });
     }
 
-    if (terraformedCount > 0 && createdBiome) {
+    // Reintroduction: seed a founder population of a locally-absent species
+    // (eligibility validated in canApplyAction); life takes hold from there.
+    let reintroduced: SpeciesDef | undefined;
+    if (def.effects.reintroduceSpecies) {
+      const target = s.species.find((st) => st.speciesId === def.effects.reintroduceSpecies)!;
+      target.population = Math.max(CONFIG.founderFraction * target.carryingCapacity, CONFIG.extinctionFloor);
+      target.arrivalProgress = 0;
+      reintroduced = this.content.species.find((sp) => sp.id === target.speciesId);
+    }
+
+    if (reintroduced) {
+      pushEvent(s, 'arrival', `${reintroduced.uiEmoji} ${reintroduced.name} returns to the land`);
+    } else if (terraformedCount > 0 && createdBiome) {
       const biomeName = this.content.biomes[createdBiome]?.name ?? createdBiome;
       pushEvent(s, 'action', `${def.name}: ${terraformedCount} cell(s) of ${fromBiome} became ${biomeName}`);
     } else {
