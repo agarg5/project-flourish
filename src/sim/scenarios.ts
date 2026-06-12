@@ -4,7 +4,7 @@
 import { CONFIG } from './config';
 import { hexDistance } from './hex';
 import { createSimulation, Simulation } from './simulation';
-import type { SpendSplit } from './types';
+import type { BiomeType, SpendSplit } from './types';
 
 export interface ScenarioRow {
   tick: number;
@@ -43,6 +43,24 @@ export function actNearSettlement(sim: Simulation, actionId: string): boolean {
     .sort((a, b) => a.habitatQuality - b.habitatQuality || a.id - b.id);
   for (const cell of candidates) {
     if (sim.applyAction(actionId, cell.id).ok) return true;
+  }
+  return false;
+}
+
+/** Terraform the first available dead-zone cell with the given action. */
+export function terraformDeadZone(sim: Simulation, actionId: string): boolean {
+  for (const cell of sim.state.cells) {
+    if (sim.content.biomes[cell.biome]?.isDeadZone && sim.applyAction(actionId, cell.id).ok) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Reintroduce a species onto the nearest cell of one of its preferred biomes. */
+export function reintroduceInto(sim: Simulation, actionId: string, biomes: BiomeType[]): boolean {
+  for (const cell of sim.cellsByDistanceFromStart()) {
+    if (biomes.includes(cell.biome) && sim.applyAction(actionId, cell.id).ok) return true;
   }
   return false;
 }
@@ -104,6 +122,42 @@ export const stewardForward: Strategy = {
     if (ageIdx >= 3) {
       if (countBuildings(sim, 'sawmill') < 1) placeNearStart(sim, 'sawmill');
       if (countActions(sim, 'reforest') < 2) actNearSettlement(sim, 'reforest');
+    }
+  },
+};
+
+// Doc 12 Phase 5: the full thesis playthrough — steward through every age, then
+// use the late-game stewardship tools (reintroduction + dead-zone terraforming)
+// to push the world past the wild baseline toward the Hestia ceiling.
+export const stewardToHestia: Strategy = {
+  name: 'steward-to-hestia',
+  spendSplit: { buildings: 0.34, rnd: 0.33, stewardship: 0.33 },
+  onTurn(sim, turn) {
+    stewardForward.onTurn(sim, turn); // reuse the early → industrial playbook
+    const ageIdx = sim.content.ages.find((a) => a.id === sim.state.age)?.index ?? 0;
+    const absent = (id: string) =>
+      (sim.state.species.find((s) => s.speciesId === id)?.population ?? 0) <= 0;
+
+    if (ageIdx >= 4) {
+      // Modern: renewables, green housing, corridors, and the lynx returns.
+      if (countBuildings(sim, 'solar_array') < 2) placeNearStart(sim, 'solar_array');
+      if (countBuildings(sim, 'green_tower') < 1) placeNearStart(sim, 'green_tower');
+      if (countActions(sim, 'wildlife_corridor') < 2) actNearSettlement(sim, 'wildlife_corridor');
+      if (absent('lynx')) reintroduceInto(sim, 'reintroduce_lynx', ['forest', 'mountain']);
+    }
+    if (ageIdx >= 5) {
+      // Synergy: living buildings, vertical farms, rewilding, and the bison keystone.
+      if (countBuildings(sim, 'living_building') < 2) placeNearStart(sim, 'living_building');
+      if (countBuildings(sim, 'vertical_farm') < 1) placeNearStart(sim, 'vertical_farm');
+      if (countActions(sim, 'rewild_landscape') < 2) actNearSettlement(sim, 'rewild_landscape');
+      if (absent('bison')) reintroduceInto(sim, 'reintroduce_bison', ['grassland', 'forest']);
+    }
+    if (ageIdx >= 6) {
+      // Stewardship: clean abundance, and green the dead zone toward Hestia.
+      if (countBuildings(sim, 'fusion_plant') < 1) placeNearStart(sim, 'fusion_plant');
+      if (countBuildings(sim, 'arcology') < 1) placeNearStart(sim, 'arcology');
+      terraformDeadZone(sim, 'green_desert');
+      terraformDeadZone(sim, 'create_oasis');
     }
   },
 };

@@ -4,7 +4,9 @@
 // the multiplier punishes degradation, and the synergy invariant holds.
 
 import { describe, expect, test } from 'bun:test';
-import { balanced, buildHeavy, greenPath, neglectPath, runScenario, stewardForward } from '../scenarios';
+import {
+  balanced, buildHeavy, greenPath, neglectPath, runScenario, stewardForward, stewardToHestia,
+} from '../scenarios';
 
 describe('worked example: steward-forward vs build-heavy (doc 10)', () => {
   const A = runScenario(buildHeavy, 600);
@@ -127,5 +129,56 @@ describe('M4: the full progression spine is playable (doc 06)', () => {
     // Eco multiplier stays healthy even with industrial buildings — the
     // stewardship pairing pays for the impact.
     expect(long.rows[long.rows.length - 1].ecoMult).toBeGreaterThan(1.3);
+  });
+});
+
+describe('steward-to-Hestia: the late-game payoff lands (doc 12 Phase 5)', () => {
+  // Long enough to reach Stewardship (~tick 1865), green the whole dead zone,
+  // and let the reintroduced keystones establish. End-state stabilises by ~3000.
+  const run = runScenario(stewardToHestia, 3500);
+  const sim = run.sim;
+  const deadZones = () =>
+    sim.state.cells.filter((c) => sim.content.biomes[c.biome]?.isDeadZone).length;
+
+  test('reaches the Stewardship age', () => {
+    expect(sim.state.age).toBe('stewardship');
+  });
+
+  test('terraforming eliminates the dead zone and pushes World Vitality past every baseline', () => {
+    expect(deadZones()).toBe(0); // the desert is fully greened
+    const wildBaseline = sim.content.ages[0].ceilings.worldCarryingCapacity;
+    const stewardshipCeiling = sim.content.ages[6].ceilings.worldCarryingCapacity;
+    expect(sim.state.terraformBonus).toBeGreaterThan(0);
+    // The player has pushed the world's capacity for life ABOVE even the final
+    // age's baseline ceiling — the Hestia horizon, earned by terraforming.
+    expect(sim.state.worldCarryingCapacity).toBeGreaterThan(stewardshipCeiling);
+    expect(sim.state.worldCarryingCapacity).toBeGreaterThan(wildBaseline * 2);
+  });
+
+  test('the reintroduced species have returned and persisted', () => {
+    const pop = (id: string) => sim.state.species.find((s) => s.speciesId === id)?.population ?? 0;
+    expect(pop('lynx')).toBeGreaterThan(0);
+    expect(pop('bison')).toBeGreaterThan(0); // the reintroduced second keystone holds
+  });
+
+  test('late-age natural arrivals recolonise the healed world', () => {
+    const pop = (id: string) => sim.state.species.find((s) => s.speciesId === id)?.population ?? 0;
+    expect(pop('otter')).toBeGreaterThan(0);
+    expect(pop('crane')).toBeGreaterThan(0);
+  });
+
+  test('the world ends far richer than it began', () => {
+    const start = run.rows[0].flourishing;
+    const end = run.rows[run.rows.length - 1].flourishing;
+    expect(end).toBeGreaterThan(start * 3);
+  });
+
+  test('synergy invariant holds across the whole thesis playthrough', () => {
+    for (let i = 1; i < run.rows.length; i++) {
+      const dW = run.rows[i].wellbeing - run.rows[i - 1].wellbeing;
+      const dB = run.rows[i].biodiversity - run.rows[i - 1].biodiversity;
+      const dF = run.rows[i].flourishing - run.rows[i - 1].flourishing;
+      if (dW < -1e-9 && dB < -1e-9) expect(dF).toBeLessThanOrEqual(1e-9);
+    }
   });
 });
