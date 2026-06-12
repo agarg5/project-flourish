@@ -1,7 +1,8 @@
 import type { ActionDef } from '../sim/types';
 
-// Seed stewardship actions per doc 09 section 5. Reintroduce/terraform are
-// deliberately out of seed scope (M5).
+// Seed stewardship actions per doc 09 section 5, plus late-age terraforming
+// (M5 / doc 12): converting dead zones to living biomes raises the world's
+// carrying capacity toward the Hestia ceiling.
 export const ACTIONS: ActionDef[] = [
   {
     id: 'plant_hedgerow', ageId: 'stone', name: 'Plant Hedgerow',
@@ -32,5 +33,26 @@ export const ACTIONS: ActionDef[] = [
     description: 'Whole hillsides replanted — restoration at industrial scale.',
     cost: 45, kind: 'rewild',
     effects: { habitat: [{ suitabilityDelta: 0.15, radius: 2 }] },
+  },
+
+  // --- Terraforming (Stewardship Age): the dead-zone reversal. Only ever
+  // converts dead-zone cells, so living land is never overwritten. ---
+  {
+    id: 'green_desert', ageId: 'stewardship', name: 'Green the Desert',
+    description: 'Hold water in the soil and seed hardy grasses — barren sand becomes living grassland.',
+    cost: 55, kind: 'terraform',
+    effects: {
+      habitat: [{ createsBiome: 'grassland', suitabilityDelta: 0.1, radius: 1 }],
+      raisesCarryingCapacity: 8,
+    },
+  },
+  {
+    id: 'create_oasis', ageId: 'stewardship', name: 'Create Oasis',
+    description: 'Draw groundwater to the surface — a wetland refuge blooms in the dead heart of the desert.',
+    cost: 45, kind: 'terraform',
+    effects: {
+      habitat: [{ createsBiome: 'wetland', suitabilityDelta: 0.15, radius: 0 }],
+      raisesCarryingCapacity: 6,
+    },
   },
 ];

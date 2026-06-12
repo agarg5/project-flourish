@@ -60,7 +60,8 @@ export function advanceAge(state: SimState, content: Content): boolean {
   state.age = next.id;
   state.ageUpReady = false;
   state.ecoHealthSustainedTicks = 0;
-  state.worldCarryingCapacity = next.ceilings.worldCarryingCapacity;
+  // Preserve the player's terraform-earned bonus across the age jump.
+  state.worldCarryingCapacity = next.ceilings.worldCarryingCapacity + state.terraformBonus;
   pushEvent(state, 'ageUp', `${next.name} — ${next.blurb}`);
   return true;
 }

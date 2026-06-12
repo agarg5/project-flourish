@@ -64,6 +64,7 @@ export class Simulation {
       economicOutput: 0,
       flourishing: 0,
       worldCarryingCapacity: content.ages[0].ceilings.worldCarryingCapacity,
+      terraformBonus: 0,
       ecoHealthSustainedTicks: 0,
       ageUpReady: false,
       sub: {
@@ -112,6 +113,10 @@ export class Simulation {
     s.biodiversity = bio.bio01 * age.ceilings.maxBiodiversity;
     s.wellbeing = wb.wellbeing;
     s.flourishing = (s.wellbeing * s.biodiversity) / 100;
+
+    // The Hestia horizon: the world's capacity for life is the age's baseline
+    // ceiling plus whatever the player has earned by terraforming dead zones.
+    s.worldCarryingCapacity = age.ceilings.worldCarryingCapacity + s.terraformBonus;
 
     // Ecological health: blend of global biodiversity and habitat quality in
     // the settlement impact zone, smoothed over time (doc 03 section 4).
@@ -216,7 +221,11 @@ export class Simulation {
     }
     const cell = s.cells[cellId];
     if (!cell) return { ok: false, error: 'no such cell' };
-    if (this.content.biomes[cell.biome]?.isDeadZone) return { ok: false, error: 'dead zone' };
+    // Dead zones reject every action except terraforming — terraforming is the
+    // one verb that can bring dead land back to life.
+    if (this.content.biomes[cell.biome]?.isDeadZone && def.kind !== 'terraform') {
+      return { ok: false, error: 'dead zone' };
+    }
     if ((s.cellActions[cellId] ?? []).includes(actionId)) {
       return { ok: false, error: 'already applied here' };
     }
@@ -235,10 +244,35 @@ export class Simulation {
     if (payFromStewardship) s.stewardshipBudget -= def.cost;
     else s.treasury -= def.cost;
     s.cellActions[cellId] = [...(s.cellActions[cellId] ?? []), actionId];
+
+    // Terraforming permanently converts qualifying cells' biome. We only ever
+    // convert dead-zone cells, so greening a desert never overwrites living land.
+    const fromBiome = cell.biome;
+    let terraformedCount = 0;
+    let createdBiome: typeof cell.biome | undefined;
+    for (const eff of def.effects.habitat ?? []) {
+      if (!eff.createsBiome) continue;
+      const radius = eff.radius ?? 0;
+      for (const c of s.cells) {
+        if (!this.content.biomes[c.biome]?.isDeadZone) continue;
+        if (hexDistance(c, cell) > radius) continue;
+        c.biome = eff.createsBiome;
+        createdBiome = eff.createsBiome;
+        terraformedCount++;
+      }
+    }
+    if (def.effects.raisesCarryingCapacity) s.terraformBonus += def.effects.raisesCarryingCapacity;
+
     if (def.effects.habitat?.length) {
       s.placedEffects.push({ originCellId: cellId, sourceId: def.id, effects: def.effects.habitat });
     }
-    pushEvent(s, 'action', `${def.name} (${cell.biome})`);
+
+    if (terraformedCount > 0 && createdBiome) {
+      const biomeName = this.content.biomes[createdBiome]?.name ?? createdBiome;
+      pushEvent(s, 'action', `${def.name}: ${terraformedCount} cell(s) of ${fromBiome} became ${biomeName}`);
+    } else {
+      pushEvent(s, 'action', `${def.name} (${cell.biome})`);
+    }
     return { ok: true };
   }
 

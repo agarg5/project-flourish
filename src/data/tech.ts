@@ -92,4 +92,13 @@ export const TECHS: TechDef[] = [
       modifiers: [{ target: 'economy', op: 'mul', value: 1.1, note: 'rail trade reach' }],
     },
   },
+
+  // --- Stewardship Age (age gate at 2400 research). Full late-age spine lands
+  // in M5/Phase 3; this is the terraforming capstone (doc 12). ---
+  {
+    id: 'terraforming', ageId: 'stewardship', name: 'Terraforming',
+    description: 'Bring dead land back to life — greened deserts and new oases that hold more life than before.',
+    researchCost: 2400, prerequisites: ['rail_links'],
+    unlocks: { actions: ['green_desert', 'create_oasis'] },
+  },
 ];
