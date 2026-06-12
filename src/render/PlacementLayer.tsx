@@ -65,7 +65,7 @@ export function PlacementLayer() {
           setPlacing(null);
         }}
       >
-        <planeGeometry args={[120, 120]} />
+        <planeGeometry args={[140, 140]} />
       </mesh>
 
       {placing && hovered && (

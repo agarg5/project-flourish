@@ -34,4 +34,4 @@ export function createWorldCells(): WorldCell[] {
 
 // The settlement starts near the forest-grassland boundary north of the
 // mountain, far enough out that the massif is scenery, not the whole view.
-export const START_QR = { q: 4, r: -8 };
+export const START_QR = { q: 8, r: -16 };

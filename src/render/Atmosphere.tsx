@@ -39,6 +39,10 @@ const CLOUDS = [
   { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_big.gltf`, x: -2, z: 18, y: 12.8, speed: 0.2, width: 3.0 },
   { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_small.gltf`, x: 18, z: 14, y: 11.6, speed: 0.28, width: 2.0 },
   { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_big.gltf`, x: -20, z: -16, y: 13.4, speed: 0.16, width: 2.8 },
+  { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_big.gltf`, x: 30, z: -28, y: 12.2, speed: 0.24, width: 3.4 },
+  { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_small.gltf`, x: -34, z: 26, y: 13.0, speed: 0.3, width: 2.1 },
+  { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_big.gltf`, x: 8, z: 38, y: 12.6, speed: 0.18, width: 2.9 },
+  { path: `${import.meta.env.BASE_URL}models/kaykit/cloud_small.gltf`, x: -28, z: -34, y: 11.8, speed: 0.26, width: 1.9 },
 ];
 
 for (const c of CLOUDS) useGLTF.preload(c.path);

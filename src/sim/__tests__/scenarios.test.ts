@@ -35,11 +35,16 @@ describe('worked example: steward-forward vs build-heavy (doc 10)', () => {
     const aBio = A.rows[A.rows.length - 1].biodiversity;
     const bBio = B.rows[B.rows.length - 1].biodiversity;
     expect(aBio).toBeLessThan(bBio - 8);
-    // Compare the two playthroughs rather than absolute pristine fractions —
-    // the bigger the map, the less one settlement dents the GLOBAL wolf K.
+    // Compare the habitat the wolf LOSES (pristine - K): the settlement's
+    // dent is an absolute quantity, so unlike ratios of global K it does not
+    // dilute away as the map grows. Careless play costs the wolf several
+    // times more habitat than careful play, and the retreat is real.
     const wolf = A.sim.state.species.find((s) => s.speciesId === 'wolf')!;
     const wolfB = B.sim.state.species.find((s) => s.speciesId === 'wolf')!;
-    expect(wolf.carryingCapacity).toBeLessThan(0.97 * wolfB.carryingCapacity);
+    const lostA = wolf.pristineCapacity - wolf.carryingCapacity;
+    const lostB = wolfB.pristineCapacity - wolfB.carryingCapacity;
+    expect(lostA).toBeGreaterThan(3);
+    expect(lostA).toBeGreaterThan(5 * Math.max(lostB, 0.0001));
     expect(wolfB.carryingCapacity).toBeGreaterThan(0.95 * wolfB.pristineCapacity);
   });
 });

@@ -3,6 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { Bloom, EffectComposer, N8AO, TiltShift2, Vignette } from '@react-three/postprocessing';
 import { Suspense, useEffect } from 'react';
 import { ACESFilmicToneMapping } from 'three';
+import { CONFIG } from '../sim';
 import { Clouds, WetlandWater } from './Atmosphere';
 import { Buildings } from './Buildings';
 import { CameraRig } from './CameraRig';
@@ -49,7 +50,11 @@ export function Scene({ onContextRestored }: { onContextRestored?: () => void })
       gl={{ toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
     >
       <Sky sunPosition={[60, 38, 25]} turbidity={5} rayleigh={0.4} mieCoefficient={0.004} />
-      <fog attach="fog" args={['#bccab6', 85, 210]} />
+      {/* Fog distances scale with the island so the macro view isn't a haze. */}
+      <fog
+        attach="fog"
+        args={['#bccab6', CONFIG.world.radius * Math.sqrt(3) * 3.2, CONFIG.world.radius * Math.sqrt(3) * 8]}
+      />
       <hemisphereLight args={['#cfe4ff', '#5a6b4a', 0.55]} />
       <ambientLight intensity={0.25} color="#f0f4e4" />
       <directionalLight
@@ -60,12 +65,12 @@ export function Scene({ onContextRestored }: { onContextRestored?: () => void })
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
-        shadow-camera-left={-45}
-        shadow-camera-right={45}
-        shadow-camera-top={45}
-        shadow-camera-bottom={-45}
+        shadow-camera-left={-55}
+        shadow-camera-right={55}
+        shadow-camera-top={55}
+        shadow-camera-bottom={-55}
         shadow-camera-near={1}
-        shadow-camera-far={160}
+        shadow-camera-far={200}
       />
       {/* Self-contained environment (no external HDR fetch) used ONLY for
           specular reflections on shiny surfaces (water). environmentIntensity

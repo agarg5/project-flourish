@@ -6,7 +6,7 @@ export const CONFIG = {
   tickRate: 6,                   // sim ticks per second
   ticksPerTurn: 30,              // one "turn" in docs 10/11 = 30 ticks (~5s)
 
-  world: { radius: 14 },         // hexagon radius -> 3R(R+1)+1 = 631 cells
+  world: { radius: 28 },         // hexagon radius -> 3R(R+1)+1 = 2437 cells (~55 across, RCT-scale)
 
   // Spatial model (doc 08):
   offBiomePenalty: 0.2,          // biomeMatch when cell biome not preferred

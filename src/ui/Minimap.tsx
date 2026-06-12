@@ -1,64 +1,84 @@
-// Top-down minimap (RCT-style). Draws every cell as a small biome-coloured
-// hex, the settlement and wildlife as dots, and a marker for where the camera
-// is currently looking. Click to recenter the camera there.
+// Top-down minimap (RCT-style): the island rendered as smooth filled biome
+// regions (each pixel samples its nearest hex — no dot/pixel look), with the
+// settlement as gold squares, wildlife as small emoji, and a marker for where
+// the camera is looking. Click to recenter the camera there.
 
-import { useEffect, useRef } from 'react';
-import { axialToWorld } from '../sim';
+import { useEffect, useMemo, useRef } from 'react';
+import { axialToWorld, worldToAxial } from '../sim';
 import { cameraApi } from '../render/CameraRig';
 import { sim, useGame } from '../state/store';
 
-const BIOME_DOT: Record<string, string> = {
-  forest: '#3a7d4f',
-  grassland: '#9caa55',
-  wetland: '#3f7d70',
-  coast_shallow: '#4f9e92',
-  desert: '#cdb069',
-  mountain: '#8b8e98',
-  open_water: '#3f6f8f',
+const BIOME_FILL: Record<string, [number, number, number]> = {
+  forest: [58, 125, 79],
+  grassland: [156, 170, 85],
+  wetland: [63, 125, 112],
+  coast_shallow: [79, 158, 146],
+  desert: [205, 176, 105],
+  mountain: [139, 142, 152],
+  open_water: [63, 111, 143],
 };
 
-const SIZE = 168; // px
-const PAD = 10;
+const SIZE = 190; // px
+const PAD = 8;
 
 export function Minimap() {
   const snap = useGame((g) => g.snap);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Static world extent + transform from world (x,z) -> minimap px.
-  const extentRef = useRef(0);
-  useEffect(() => {
+  // Static world extent + transform from world (x,z) -> minimap px. Computed
+  // synchronously so the first base-image render already has the right scale.
+  const extent = useMemo(() => {
     let max = 1;
     for (const c of sim.state.cells) {
       const { x, z } = axialToWorld(c.q, c.r);
       max = Math.max(max, Math.abs(x), Math.abs(z));
     }
-    extentRef.current = max;
+    return max + 0.9; // include the outer cells' own footprint
   }, []);
+  const extentRef = useRef(extent);
+  extentRef.current = extent;
 
   const toPx = (x: number, z: number) => {
-    const e = extentRef.current || 1;
-    const s = (SIZE - PAD * 2) / (2 * e);
+    const s = (SIZE - PAD * 2) / (2 * extentRef.current);
     return { px: SIZE / 2 + x * s, py: SIZE / 2 + z * s, s };
   };
 
-  // Redraw on each snapshot (biomes/wildlife) — cheap at this resolution.
+  // Base biome image: every pixel samples its containing hex, giving solid
+  // continuous regions. Rebuilt only when a biome actually changes (terraform).
+  const biomeSig = useMemo(() => snap.cells.map((c) => c.biome[0]).join(''), [snap.cells]);
+  const baseImage = useMemo(() => {
+    const byQR = new Map<string, string>();
+    for (const c of snap.cells) byQR.set(`${c.q},${c.r}`, c.biome);
+    const img = new ImageData(SIZE, SIZE);
+    const e = extentRef.current || 1;
+    const s = (SIZE - PAD * 2) / (2 * e);
+    for (let py = 0; py < SIZE; py++) {
+      for (let px = 0; px < SIZE; px++) {
+        const wx = (px - SIZE / 2) / s;
+        const wz = (py - SIZE / 2) / s;
+        const { q, r } = worldToAxial(wx, wz);
+        const biome = byQR.get(`${q},${r}`);
+        if (!biome) continue; // outside the island -> transparent
+        const [cr, cg, cb] = BIOME_FILL[biome] ?? [136, 136, 136];
+        const o = (py * SIZE + px) * 4;
+        img.data[o] = cr;
+        img.data[o + 1] = cg;
+        img.data[o + 2] = cb;
+        img.data[o + 3] = 255;
+      }
+    }
+    return img;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [biomeSig]);
+
+  // Redraw overlays on each snapshot (buildings/wildlife move slowly).
   useEffect(() => {
     const cv = canvasRef.current;
     if (!cv) return;
     const ctx = cv.getContext('2d')!;
     ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.putImageData(baseImage, 0, 0);
 
-    // Cells.
-    const { s } = toPx(0, 0);
-    const r = Math.max(2, s * 0.62);
-    for (const c of snap.cells) {
-      const { x, z } = axialToWorld(c.q, c.r);
-      const { px, py } = toPx(x, z);
-      ctx.fillStyle = BIOME_DOT[c.biome] ?? '#888';
-      ctx.beginPath();
-      ctx.arc(px, py, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
     // Buildings (settlement).
     for (const b of snap.buildings) {
       const c = snap.cells[b.cellId];
@@ -68,18 +88,18 @@ export function Minimap() {
       ctx.fillStyle = '#f0d68a';
       ctx.fillRect(px - 2, py - 2, 4, 4);
     }
-    // Wildlife.
+    // Wildlife as small emoji (readable, RCT-map cute).
+    ctx.font = '9px "Apple Color Emoji", "Segoe UI Emoji", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     for (const sp of snap.species) {
       const c = snap.cells[sp.markerCellId];
       if (!c) continue;
       const { x, z } = axialToWorld(c.q, c.r);
       const { px, py } = toPx(x, z);
-      ctx.fillStyle = sp.color;
-      ctx.beginPath();
-      ctx.arc(px, py, 1.7, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillText(sp.emoji, px, py);
     }
-  }, [snap]);
+  }, [snap, baseImage]);
 
   // A small DOM marker tracks the camera target each animation frame (cheaper
   // than redrawing the whole canvas at 60fps).

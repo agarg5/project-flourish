@@ -92,8 +92,8 @@ export function Trees() {
 
   return (
     <group>
-      <TreeInstances path={PINE} items={pines} targetHeight={1.1} limit={1600} />
-      <TreeInstances path={BROADLEAF} items={broadleaf} targetHeight={0.95} limit={800} />
+      <TreeInstances path={PINE} items={pines} targetHeight={1.1} limit={3400} />
+      <TreeInstances path={BROADLEAF} items={broadleaf} targetHeight={0.95} limit={1300} />
     </group>
   );
 }
