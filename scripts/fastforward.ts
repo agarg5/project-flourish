@@ -4,13 +4,13 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import {
-  balanced, buildHeavy, greenPath, neglectPath, runScenario, stewardForward, toCsv,
+  balanced, buildHeavy, greenPath, neglectPath, runScenario, stewardForward, stewardToHestia, toCsv,
 } from '../src/sim/scenarios';
 
 const ticks = Number(process.argv[2] ?? 600);
 mkdirSync('tmp', { recursive: true });
 
-const strategies = [greenPath, neglectPath, balanced, buildHeavy, stewardForward];
+const strategies = [greenPath, neglectPath, balanced, buildHeavy, stewardForward, stewardToHestia];
 
 console.log(`tick=${ticks}`);
 console.log(
