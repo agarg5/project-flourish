@@ -55,4 +55,19 @@ export const ACTIONS: ActionDef[] = [
       raisesCarryingCapacity: 6,
     },
   },
+
+  // --- Reintroduction (doc 12 Phase 2): a rare, earned act. Only succeeds once
+  // the species' habitat is ready to receive it (enforced in canApplyAction). ---
+  {
+    id: 'reintroduce_lynx', ageId: 'modern', name: 'Reintroduce Lynx',
+    description: 'Return the lynx to restored forest and uplands — a predator the land has been missing.',
+    cost: 40, kind: 'reintroduce',
+    effects: { reintroduceSpecies: 'lynx' },
+  },
+  {
+    id: 'reintroduce_bison', ageId: 'synergy', name: 'Reintroduce Bison',
+    description: 'Bring the wisent home — a keystone grazer that shapes meadows for everything else.',
+    cost: 60, kind: 'reintroduce',
+    effects: { reintroduceSpecies: 'bison' },
+  },
 ];

@@ -57,7 +57,11 @@ export function computeBiodiversity(state: SimState, content: Content): Biodiver
   }
   const nicheCoverage = nicheSum / ALL_NICHES.length;
 
-  const keystones = content.species.filter((s) => s.isKeystone);
+  // Reintroduction-only keystones (locally extinct with no source population)
+  // are a future restoration opportunity, not a standing deficit — exclude them
+  // until they are brought back, mirroring the populationHealth eligibility
+  // filter below. Their keystone value still manifests via niche support.
+  const keystones = content.species.filter((s) => s.isKeystone && !s.reintroOnly);
   let keystoneHealth = 1;
   if (keystones.length > 0) {
     keystoneHealth =
