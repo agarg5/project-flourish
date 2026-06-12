@@ -70,4 +70,19 @@ export const ACTIONS: ActionDef[] = [
     cost: 60, kind: 'reintroduce',
     effects: { reintroduceSpecies: 'bison' },
   },
+
+  // --- Large-scale rewilding (doc 12 Phase 3): habitat restoration at the
+  // landscape scale that the late ages unlock. ---
+  {
+    id: 'wildlife_corridor', ageId: 'modern', name: 'Wildlife Corridor',
+    description: 'Stitch fragmented habitats together so wildlife can move, feed, and breed across the land.',
+    cost: 35, kind: 'rewild',
+    effects: { habitat: [{ suitabilityDelta: 0.1, radius: 3, note: 'connects fragmented habitat' }] },
+  },
+  {
+    id: 'rewild_landscape', ageId: 'synergy', name: 'Rewild Landscape',
+    description: 'Step back and let a whole landscape return to wildness — restoration at its largest scale.',
+    cost: 50, kind: 'rewild',
+    effects: { habitat: [{ suitabilityDelta: 0.18, radius: 3 }] },
+  },
 ];

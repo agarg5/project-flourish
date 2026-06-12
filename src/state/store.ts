@@ -88,6 +88,8 @@ export interface UISnapshot {
   ecoHealth: number;
   ecoMult: number;
   economicOutput: number;
+  worldVitality: number;          // worldCarryingCapacity — the Hestia horizon
+  worldVitalityBaseline: number;  // the wild starting world's capacity (the reference)
   sub: SubIndices;
   spendSplit: SpendSplit;
   cells: UICell[];
@@ -124,6 +126,8 @@ function takeSnapshot(): UISnapshot {
     ecoHealth: s.ecologicalHealth,
     ecoMult: s.ecoMultiplier,
     economicOutput: s.economicOutput,
+    worldVitality: s.worldCarryingCapacity,
+    worldVitalityBaseline: sim.content.ages[0].ceilings.worldCarryingCapacity,
     sub: { ...s.sub },
     spendSplit: { ...s.spendSplit },
     cells: s.cells.map((c) => ({
