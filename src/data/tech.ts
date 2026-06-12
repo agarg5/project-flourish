@@ -157,8 +157,8 @@ export const TECHS: TechDef[] = [
   },
   {
     id: 'terraforming', ageId: 'stewardship', name: 'Terraforming', isBranch: true,
-    description: 'Bring dead land back to life — greened deserts and new oases that hold more life than before.',
+    description: 'Bring dead land back to life — greened deserts, new oases, and shallow seas raised from the deep.',
     researchCost: 2500, prerequisites: ['rewilding'],
-    unlocks: { actions: ['green_desert', 'create_oasis'] },
+    unlocks: { actions: ['green_desert', 'create_oasis', 'seed_shallows'] },
   },
 ];

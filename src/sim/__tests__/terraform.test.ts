@@ -94,4 +94,19 @@ describe('Phase 1 — terraforming converts dead zones to living land (doc 12)',
     expect(res.ok).toBe(true);
     expect(desert.biome).toBe('wetland');
   });
+
+  test('seed_shallows raises deep open water into a living shallow coast', () => {
+    const sim = createSimulation();
+    sim.state.unlockedTech.push('terraforming');
+    sim.state.treasury = 1000;
+    const water = sim.state.cells.find((c) => c.biome === 'open_water');
+    if (!water) throw new Error('seed has no open_water cell to terraform');
+    expect(sim.content.biomes.open_water.isDeadZone).toBe(true);
+    const bonusBefore = sim.state.terraformBonus;
+
+    const res = sim.applyAction('seed_shallows', water.id);
+    expect(res.ok).toBe(true);
+    expect(water.biome).toBe('coast_shallow');
+    expect(sim.state.terraformBonus).toBe(bonusBefore + 7);
+  });
 });

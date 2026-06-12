@@ -35,4 +35,14 @@ export const BIOMES: Record<string, BiomeDef> = {
     baseQuality: 0.55, baseProductivity: 0.2, baseBiodiversityCapacity: 0.4,
     supportsNiches: ['predator_balancer'],
   },
+  // Deep, sunless water — biologically sparse until the sea floor is raised into
+  // a sunlit shelf. A dead zone, so it is the terraform target for shallow-sea
+  // creation (doc 02 section 7; doc 12). The Hestia thesis: life crowds the
+  // shallows, not the open deep.
+  open_water: {
+    type: 'open_water', name: 'Open Water',
+    baseQuality: 0.05, baseProductivity: 0.05, baseBiodiversityCapacity: 0.1,
+    isDeadZone: true,
+    supportsNiches: [],
+  },
 };
