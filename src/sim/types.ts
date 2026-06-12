@@ -193,7 +193,8 @@ export interface SimState {
   ecoMultiplier: number;
   economicOutput: number;        // per turn
   flourishing: number;           // wellbeing * biodiversity / 100
-  worldCarryingCapacity: number;
+  worldCarryingCapacity: number; // age baseline ceiling + terraformBonus (the Hestia horizon)
+  terraformBonus: number;        // carrying capacity the player has earned by terraforming dead zones
   ecoHealthSustainedTicks: number;
   ageUpReady: boolean;           // both gate halves met; awaiting player confirmation
   sub: SubIndices;

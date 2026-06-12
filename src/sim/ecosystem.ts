@@ -73,6 +73,13 @@ export function computeCapacitiesAndMarkers(state: SimState, content: Content): 
       return { sp, st, inRange };
     });
 
+  // The world's capacity for life scales every habitat's carrying capacity.
+  // At the starting world (no terraforming) this is exactly 1.0, so pristine
+  // balance is unchanged; terraforming dead zones raises it above 1, growing
+  // herds and resilience as the planet is pushed toward the Hestia ceiling.
+  const worldFactor =
+    state.worldCarryingCapacity / content.ages[0].ceilings.worldCarryingCapacity;
+
   for (const sp of content.species) {
     const suit = suits.get(sp.id)!;
     let K = 0;
@@ -88,7 +95,7 @@ export function computeCapacitiesAndMarkers(state: SimState, content: Content): 
       }
       K += sp.baseCarryingCapacity * s * factor;
     }
-    stateOf(state, sp.id).carryingCapacity = K;
+    stateOf(state, sp.id).carryingCapacity = K * worldFactor;
   }
 }
 
