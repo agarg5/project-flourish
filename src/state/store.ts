@@ -61,7 +61,8 @@ export interface UISpecies {
   color: string;
   population: number;
   carryingCapacity: number;
-  markerCellId: number;
+  /** Cells where this species' herds render — spread across its habitat. */
+  markerCellIds: number[];
 }
 
 export interface UIPlaceable {
@@ -141,7 +142,7 @@ function takeSnapshot(): UISnapshot {
           color: def.uiColor,
           population: Math.round(sp.population),
           carryingCapacity: Math.round(sp.carryingCapacity),
-          markerCellId: sp.markerCellIds[0] ?? 0,
+          markerCellIds: sp.markerCellIds.length ? [...sp.markerCellIds] : [0],
         };
       }),
     events: [...s.events],

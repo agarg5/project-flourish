@@ -12,7 +12,7 @@ export const CONFIG = {
   offBiomePenalty: 0.2,          // biomeMatch when cell biome not preferred
   founderFraction: 0.1,          // founder pop on arrival, fraction of K
   keystoneRadius: 2,             // hex rings a healthy keystone boosts
-  markerCellCount: 3,            // cells where a species' marker renders
+  markerCellCount: 6,            // herds per species (render anchors, spread by separation)
 
   // Population dynamics (docs 08/11):
   populationGrowthRate: 0.05,    // logistic r per tick, common species

@@ -27,13 +27,35 @@ export function computeCapacitiesAndMarkers(state: SimState, content: Content): 
     suits.set(sp.id, state.cells.map((c) => suitability(c, sp)));
   }
 
-  // Markers first: top-N cells by suitability (render anchors + keystone range origins).
-  for (const sp of content.species) {
+  // Markers first: top-N cells by suitability (render anchors + keystone range
+  // origins), kept a minimum distance apart — on a pristine map suitability
+  // ties everywhere and pure top-N would pile every herd into the lowest-id
+  // corner, making wildlife impossible to find on a big world. Exact ties are
+  // broken by a deterministic per-cell jitter (id order walks the west edge),
+  // far smaller than any real suitability difference.
+  const sep = Math.max(3, Math.round(CONFIG.world.radius / 4));
+  const jitter = (cellId: number, salt: number): number => {
+    let h = (cellId + 1) * 374761393 + (salt + 1) * 668265263;
+    h = (h ^ (h >> 13)) * 1274126177;
+    h = h ^ (h >> 16);
+    return ((h >>> 0) % 1000) / 1000;
+  };
+  for (const [si, sp] of content.species.entries()) {
     const suit = suits.get(sp.id)!;
     const ranked = state.cells
-      .map((c) => ({ id: c.id, s: suit[c.id] }))
-      .sort((a, b) => b.s - a.s || a.id - b.id);
-    stateOf(state, sp.id).markerCellIds = ranked.slice(0, CONFIG.markerCellCount).map((x) => x.id);
+      .map((c) => ({ c, s: suit[c.id] + jitter(c.id, si) * 5e-4 }))
+      .sort((a, b) => b.s - a.s || a.c.id - b.c.id);
+    const chosen: { c: (typeof state.cells)[number]; s: number }[] = [];
+    for (const cand of ranked) {
+      if (cand.s <= 0 || chosen.length >= CONFIG.markerCellCount) break;
+      if (chosen.every((m) => hexDistance(cand.c, m.c) >= sep)) chosen.push(cand);
+    }
+    // Tiny habitats may not fit N separated herds — top up with the best rest.
+    for (const cand of ranked) {
+      if (cand.s <= 0 || chosen.length >= CONFIG.markerCellCount) break;
+      if (!chosen.includes(cand)) chosen.push(cand);
+    }
+    stateOf(state, sp.id).markerCellIds = chosen.map((x) => x.c.id);
   }
 
   // Healthy keystones project their boost within keystoneRadius of their markers.

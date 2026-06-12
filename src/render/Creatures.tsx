@@ -197,9 +197,11 @@ function AnimalModel({ cfg, seed, moving }: { cfg: ModelCfg; seed: number; movin
 // cell changes (e.g. after the player builds something nearby).
 const WALK_SPEED = 1.6; // world units / second
 
-// One species marker. Art priority: committed model > dropped-in GLB (if
+// One herd marker. Art priority: committed model > dropped-in GLB (if
 // present) > procedural low-poly > emoji sprite.
-function CreatureMarker({ sp, cell, slot, slotCount }: { sp: UISpecies; cell: UICell; slot: number; slotCount: number }) {
+function CreatureMarker({ sp, herdCount, cell, slot, slotCount }: { sp: UISpecies; herdCount: number; cell: UICell; slot: number; slotCount: number }) {
+  // The species' population is split across its herds for the count label.
+  const herdPop = Math.max(1, Math.round(sp.population / Math.max(1, herdCount)));
   const { x, z } = axialToWorld(cell.q, cell.r, HEX_SIZE);
   const onWater = cell.biome === 'wetland' || cell.biome === 'coast_shallow';
   const y = cellTopY(cell.id, cell.biome) + (onWater ? 0.12 : 0);
@@ -274,7 +276,7 @@ function CreatureMarker({ sp, cell, slot, slotCount }: { sp: UISpecies; cell: UI
       <Suspense fallback={lowPoly ? <lowPoly.Comp phase={phase} /> : null}>
         <ContactShadow radius={cfg.height * 0.34} />
         <AnimalModel cfg={cfg} seed={seed} moving={moving} />
-        <CountLabel population={sp.population} y={cfg.height + 0.25 + labelLift} />
+        <CountLabel population={herdPop} y={cfg.height + 0.25 + labelLift} />
       </Suspense>
     );
   } else if (lowPoly) {
@@ -282,7 +284,7 @@ function CreatureMarker({ sp, cell, slot, slotCount }: { sp: UISpecies; cell: UI
       <>
         <ContactShadow radius={0.3} />
         <lowPoly.Comp phase={phase} />
-        <CountLabel population={sp.population} y={lowPoly.labelY + 0.2 + labelLift} />
+        <CountLabel population={herdPop} y={lowPoly.labelY + 0.2 + labelLift} />
       </>
     );
   } else {
@@ -290,7 +292,7 @@ function CreatureMarker({ sp, cell, slot, slotCount }: { sp: UISpecies; cell: UI
       <>
         <ContactShadow radius={0.34} />
         <EmojiSprite emoji={sp.emoji} phase={phase} />
-        <CountLabel population={sp.population} y={SPRITE_SIZE + 0.25 + labelLift} />
+        <CountLabel population={herdPop} y={SPRITE_SIZE + 0.25 + labelLift} />
       </>
     );
   }
@@ -302,27 +304,31 @@ export function Creatures() {
   const snap = useGame((g) => g.snap);
   const cellById = new Map(snap.cells.map((c) => [c.id, c]));
 
-  // Which species share a marker cell (common at world start, when one prime
-  // habitat cell wins several species' markers).
+  // Every (species, marker) pair is one herd. Track which herds share a cell
+  // (common at world start, when one prime habitat cell wins several markers).
+  const herds = snap.species.flatMap((sp) =>
+    sp.markerCellIds.map((cellId, i) => ({ sp, cellId, key: `${sp.id}:${i}` })),
+  );
   const cellMates = new Map<number, string[]>();
-  for (const sp of snap.species) {
-    const arr = cellMates.get(sp.markerCellId) ?? [];
-    arr.push(sp.id);
-    cellMates.set(sp.markerCellId, arr);
+  for (const h of herds) {
+    const arr = cellMates.get(h.cellId) ?? [];
+    arr.push(h.key);
+    cellMates.set(h.cellId, arr);
   }
 
   return (
     <group>
-      {snap.species.map((sp) => {
-        const cell = cellById.get(sp.markerCellId);
+      {herds.map((h) => {
+        const cell = cellById.get(h.cellId);
         if (!cell) return null;
-        const mates = cellMates.get(sp.markerCellId)!;
+        const mates = cellMates.get(h.cellId)!;
         return (
           <CreatureMarker
-            key={sp.id}
-            sp={sp}
+            key={h.key}
+            sp={h.sp}
+            herdCount={h.sp.markerCellIds.length}
             cell={cell}
-            slot={mates.indexOf(sp.id)}
+            slot={mates.indexOf(h.key)}
             slotCount={mates.length}
           />
         );

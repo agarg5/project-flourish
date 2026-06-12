@@ -93,11 +93,13 @@ export function Minimap() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (const sp of snap.species) {
-      const c = snap.cells[sp.markerCellId];
-      if (!c) continue;
-      const { x, z } = axialToWorld(c.q, c.r);
-      const { px, py } = toPx(x, z);
-      ctx.fillText(sp.emoji, px, py);
+      for (const cellId of sp.markerCellIds) {
+        const c = snap.cells[cellId];
+        if (!c) continue;
+        const { x, z } = axialToWorld(c.q, c.r);
+        const { px, py } = toPx(x, z);
+        ctx.fillText(sp.emoji, px, py);
+      }
     }
   }, [snap, baseImage]);
 
