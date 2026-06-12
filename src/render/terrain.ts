@@ -162,7 +162,9 @@ export function buildTerrainGeometry(cells: UICell[]): THREE.BufferGeometry | nu
 const WATER_COLOR = new THREE.Color('#3d8294');
 
 export function buildWaterGeometry(cells: UICell[]): THREE.BufferGeometry | null {
-  const wet = cells.filter((c) => c.biome === 'wetland' || c.biome === 'coast_shallow');
+  const wet = cells.filter(
+    (c) => c.biome === 'wetland' || c.biome === 'coast_shallow' || c.biome === 'open_water',
+  );
   // Flat sheet a touch above the terrain so it reads as standing water.
   return buildSurface(wet, {
     height: (c) => cellHeight(c.id, c.biome) + 0.06,

@@ -15,7 +15,7 @@ export let sim = createSimulation(undefined, { autoStewardship: true });
 // layout or state shape changes, so stale saves are discarded rather than
 // loaded into a mismatched world. ---
 const SAVE_KEY = 'flourish.save';
-const SAVE_VERSION = 4; // v4: world radius 28
+const SAVE_VERSION = 5; // v5: open_water deep-sea band at the southern edge
 
 function loadSaved(): void {
   try {

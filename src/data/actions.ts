@@ -55,6 +55,15 @@ export const ACTIONS: ActionDef[] = [
       raisesCarryingCapacity: 6,
     },
   },
+  {
+    id: 'seed_shallows', ageId: 'stewardship', name: 'Raise the Shallows',
+    description: 'Lift the deep sea floor into a sunlit shelf — barren open water becomes a living shallow coast.',
+    cost: 50, kind: 'terraform',
+    effects: {
+      habitat: [{ createsBiome: 'coast_shallow', suitabilityDelta: 0.12, radius: 1 }],
+      raisesCarryingCapacity: 7,
+    },
+  },
 
   // --- Reintroduction (doc 12 Phase 2): a rare, earned act. Only succeeds once
   // the species' habitat is ready to receive it (enforced in canApplyAction). ---

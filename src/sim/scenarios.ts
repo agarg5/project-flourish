@@ -47,12 +47,21 @@ export function actNearSettlement(sim: Simulation, actionId: string): boolean {
   return false;
 }
 
-/** Terraform the first available dead-zone cell with the given action. */
-export function terraformDeadZone(sim: Simulation, actionId: string): boolean {
+/**
+ * Terraform the first available dead-zone cell with the given action. An
+ * optional source biome targets a specific dead zone (e.g. desert vs open
+ * water) so each terraform action only ever converts the land it is meant for.
+ */
+export function terraformDeadZone(
+  sim: Simulation,
+  actionId: string,
+  sourceBiome?: BiomeType,
+): boolean {
   for (const cell of sim.state.cells) {
-    if (sim.content.biomes[cell.biome]?.isDeadZone && sim.applyAction(actionId, cell.id).ok) {
-      return true;
-    }
+    const isTarget = sourceBiome
+      ? cell.biome === sourceBiome
+      : sim.content.biomes[cell.biome]?.isDeadZone;
+    if (isTarget && sim.applyAction(actionId, cell.id).ok) return true;
   }
   return false;
 }
@@ -153,11 +162,13 @@ export const stewardToHestia: Strategy = {
       if (absent('bison')) reintroduceInto(sim, 'reintroduce_bison', ['grassland', 'forest']);
     }
     if (ageIdx >= 6) {
-      // Stewardship: clean abundance, and green the dead zone toward Hestia.
+      // Stewardship: clean abundance, and terraform both dead zones toward
+      // Hestia — green the desert and raise the deep sea into living shallows.
       if (countBuildings(sim, 'fusion_plant') < 1) placeNearStart(sim, 'fusion_plant');
       if (countBuildings(sim, 'arcology') < 1) placeNearStart(sim, 'arcology');
-      terraformDeadZone(sim, 'green_desert');
-      terraformDeadZone(sim, 'create_oasis');
+      terraformDeadZone(sim, 'green_desert', 'desert');
+      terraformDeadZone(sim, 'create_oasis', 'desert');
+      terraformDeadZone(sim, 'seed_shallows', 'open_water');
     }
   },
 };
