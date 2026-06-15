@@ -12,7 +12,7 @@ export function StatusPanel() {
   return (
     <div className="panel status">
       <div className="age">{snap.ageName}</div>
-      <div>🪙 {snap.treasury.toFixed(0)} &nbsp; 🔬 {snap.research.toFixed(0)}</div>
+      <div>🪙 {snap.treasury.toFixed(0)} &nbsp; 🔬 {snap.research.toFixed(0)} &nbsp; 👥 {snap.citizens}</div>
       {next && snap.ageUpReady ? (
         <button className="ageup" onClick={advanceAge}>
           ✨ Advance to the {next.name}

@@ -11,6 +11,7 @@ import { Creatures } from './Creatures';
 import { Decorations } from './Decorations';
 import { Mountains } from './Mountains';
 import { Trees } from './Trees';
+import { Villagers } from './Villagers';
 import { PlacementLayer } from './PlacementLayer';
 import { World } from './World';
 
@@ -91,6 +92,7 @@ export function Scene({ onContextRestored }: { onContextRestored?: () => void })
         <WetlandWater />
         <Clouds />
         <Buildings />
+        <Villagers />
         <Creatures />
         <PlacementLayer />
       </Suspense>

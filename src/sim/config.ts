@@ -36,7 +36,20 @@ export const CONFIG = {
   wellbeingBase: { needs: 0.55, amenity: 0.2 },
   wellbeingBaseScale: 40,
   envSampleRadius: 2,            // env quality sampled near buildings
-  crowding: { densityThreshold: 0.04, scale: 3 },
+
+  // Citizens (doc 03 section 3 made literal): a settlement population that
+  // grows toward the housing its `needs:` buildings provide, and feels crowded
+  // when it outpaces amenities + nearby greenspace. Crowding was effectively
+  // inert on the large map (building/cell density ~0); tying it to people gives
+  // it teeth and creates the late-game "dense city needs green space" tension.
+  citizens: {
+    base: 6,             // founding band, present before any housing is built
+    perNeedPoint: 1.2,   // citizens supported per 'needs:' wellbeing point
+    perAmenityPoint: 1.8,// citizens comfortably served per 'amenity:' point
+    greenComfort: 14,    // citizens a fully-green surrounding comfortably hosts
+    growthRate: 0.03,    // logistic r per tick toward housing capacity
+    crowdScale: 0.7,     // how sharply over-capacity crowding bites wellbeing
+  },
 
   // Economy (docs 03 section 4 / 10 section 1):
   ecoMultiplier: { min: 0.5, span: 1.1 },  // min + span*smoothstep(h) -> 0.5..1.6

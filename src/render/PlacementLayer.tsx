@@ -19,6 +19,8 @@ export function PlacementLayer() {
   const setHoveredCell = useGame((g) => g.setHoveredCell);
   const placeAt = useGame((g) => g.placeAt);
   const setPlacing = useGame((g) => g.setPlacing);
+  const selectedCellId = useGame((g) => g.selectedCellId);
+  const setSelectedCell = useGame((g) => g.setSelectedCell);
 
   // Topology is static: map axial coords -> cell id once.
   const byQR = useMemo(() => {
@@ -54,19 +56,38 @@ export function PlacementLayer() {
         onPointerUp={(e) => {
           const d = downAt.current;
           downAt.current = null;
-          if (!d || !placing) return;
+          if (!d) return;
           const moved = Math.hypot(e.nativeEvent.clientX - d.x, e.nativeEvent.clientY - d.y);
           if (moved > DRAG_TOLERANCE) return; // it was a pan, not a tap
           const id = cellFromEvent(e);
-          if (id != null) placeAt(id);
+          if (id == null) return;
+          // In build/steward mode a tap places; otherwise a tap inspects the cell.
+          if (placing) placeAt(id);
+          else setSelectedCell(id);
         }}
         onContextMenu={(e) => {
           e.nativeEvent.preventDefault();
-          setPlacing(null);
+          if (placing) setPlacing(null);
+          else setSelectedCell(null);
         }}
       >
         <planeGeometry args={[140, 140]} />
       </mesh>
+
+      {/* Selection ring for the inspected cell (shown whenever a cell is selected). */}
+      {selectedCellId != null && cells[selectedCellId] && (
+        <mesh
+          position={(() => {
+            const c = cells[selectedCellId];
+            const { x, z } = axialToWorld(c.q, c.r, HEX_SIZE);
+            return [x, cellHeight(c.id, c.biome) + 0.04, z];
+          })()}
+          rotation={[0, Math.PI / 6, 0]}
+        >
+          <cylinderGeometry args={[HEX_SIZE * 1.02, HEX_SIZE * 1.02, 0.05, 6, 1, true]} />
+          <meshBasicMaterial color="#ffe08a" transparent opacity={0.85} depthWrite={false} />
+        </mesh>
+      )}
 
       {placing && hovered && (
         <mesh

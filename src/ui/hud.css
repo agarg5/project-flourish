@@ -32,6 +32,7 @@
   color: #cfe8b8;
   line-height: 1.05;
 }
+.flourish .trend { font-size: 18px; margin-left: 8px; vertical-align: middle; }
 .flourish .label {
   font-size: 11px;
   letter-spacing: 2px;
@@ -111,6 +112,45 @@
 .inspector .mult-good { color: #a7d489; font-weight: 700; }
 .inspector .mult-bad { color: #e9b44c; font-weight: 700; }
 .inspector .divider { grid-column: 1 / -1; border-top: 1px solid rgba(255,255,255,0.1); margin: 5px 0; }
+
+/* Cell inspector — left side, below the status panel */
+.cell-inspector {
+  position: absolute;
+  top: 120px;
+  left: 14px;
+  width: 240px;
+  font-size: 12px;
+}
+.ci-head { display: flex; justify-content: space-between; align-items: center; }
+.ci-biome { font-size: 15px; font-weight: 600; color: #e9d8a6; }
+.ci-close {
+  pointer-events: auto;
+  background: transparent;
+  border: none;
+  color: #cfc9b6;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ci-close:hover { color: #fff; }
+.ci-quality { margin-top: 6px; display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.ci-quality .bar { flex: 1; margin-top: 0; }
+.ci-pct { width: 34px; text-align: right; font-variant-numeric: tabular-nums; opacity: 0.85; }
+.ci-deadzone { margin-top: 6px; font-size: 12px; color: #d9a066; font-style: italic; }
+.ci-line { margin-top: 6px; font-size: 12px; opacity: 0.9; }
+.ci-group { margin-top: 10px; }
+.ci-group-title {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.65;
+  margin-bottom: 4px;
+}
+.ci-species { display: flex; justify-content: space-between; margin: 2px 0; }
+.ci-species.ci-absent { opacity: 0.7; }
+.ci-pop { font-variant-numeric: tabular-nums; color: #cfe8b8; }
+.ci-hint { font-size: 11px; color: #b5e48c; font-style: italic; }
+.ci-empty { margin-top: 10px; font-size: 12px; opacity: 0.75; line-height: 1.4; }
 
 /* Build menu — bottom center */
 .buildmenu {

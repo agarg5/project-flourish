@@ -9,6 +9,7 @@ import { DEFAULT_CONTENT } from './content';
 import { resolveEconomy } from './economy';
 import { computeCapacitiesAndMarkers, stepPopulations } from './ecosystem';
 import { recomputeHabitat, settlementQuality, suitability } from './habitat';
+import { stepCitizens } from './population';
 import { hexDistance } from './hex';
 import type {
   ActionDef, BuildingDef, Content, SimState, SpeciesDef, SpendSplit, WorldCell,
@@ -43,6 +44,7 @@ export class Simulation {
       researchPoints: 0,
       spendSplit: { buildings: 0.5, rnd: 0.3, stewardship: 0.2 },
       stewardshipBudget: 0,
+      citizens: CONFIG.citizens.base,
       cells,
       buildings: [],
       placedEffects: [],
@@ -72,6 +74,7 @@ export class Simulation {
       sub: {
         nicheCoverage: 0, keystoneHealth: 0, populationHealth: 0, biomeDiversity: 0,
         needs: 0, amenity: 0, envQuality: 0, crowding: 0, settlementQuality: 0,
+        housingCapacity: 0, comfortCapacity: 0,
       },
       events: [],
     };
@@ -99,6 +102,7 @@ export class Simulation {
     if (this.opts.autoStewardship) this.autoStewardshipStep();
     computeCapacitiesAndMarkers(s, this.content);
     stepPopulations(s, this.content);
+    stepCitizens(s, this.content);
     this.recomputeIndices(false);
     resolveEconomy(s, this.content, ageDef(s, this.content), this.opts);
     checkTechUnlocks(s, this.content);
@@ -141,6 +145,8 @@ export class Simulation {
       envQuality: wb.envQuality,
       crowding: wb.crowding,
       settlementQuality: sq,
+      housingCapacity: wb.housingCapacity,
+      comfortCapacity: wb.comfortCapacity,
     };
   }
 
