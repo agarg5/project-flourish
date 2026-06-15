@@ -169,6 +169,8 @@ export interface SubIndices {
   envQuality: number;
   crowding: number;
   settlementQuality: number;     // avg habitat quality in the settlement impact zone
+  housingCapacity: number;       // citizens the settlement's housing can support
+  comfortCapacity: number;       // citizens it comfortably hosts (amenities + greenspace)
 }
 
 export interface SimState {
@@ -178,6 +180,7 @@ export interface SimState {
   researchPoints: number;
   spendSplit: SpendSplit;
   stewardshipBudget: number;     // earmarked income, spent by auto-stewardship
+  citizens: number;              // settlement population (doc 03 section 3)
 
   cells: WorldCell[];
   buildings: { id: string; cellId: number; builtAtTick: number }[];

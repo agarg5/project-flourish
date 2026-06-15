@@ -5,6 +5,7 @@ import { cameraApi } from '../render/CameraRig';
 import { Scene } from '../render/Scene';
 import { useGame } from '../state/store';
 import { BuildMenu } from '../ui/BuildMenu';
+import { CellInspector } from '../ui/CellInspector';
 import { EventsFeed } from '../ui/EventsFeed';
 import { FlourishingMeter } from '../ui/FlourishingMeter';
 import { InspectorOverlay } from '../ui/InspectorOverlay';
@@ -130,6 +131,7 @@ export function App() {
         <SpendSplitControl />
         <EventsFeed />
         <Minimap />
+        <CellInspector />
         <BuildMenu />
         <TechTree />
         <Tutorial key={restartCount} />

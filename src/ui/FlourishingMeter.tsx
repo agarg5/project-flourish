@@ -1,11 +1,40 @@
+import { useRef } from 'react';
 import { useGame } from '../state/store';
+
+// How many ticks of history define "recent" for the trend arrow (~5s at 6/s).
+const TREND_WINDOW = 30;
+
+/** A small ▲/▼ showing whether Flourishing is rising or falling lately. */
+function useTrend(tick: number, value: number): number {
+  const samples = useRef<{ tick: number; value: number }[]>([]);
+  const buf = samples.current;
+  if (buf.length === 0 || buf[buf.length - 1].tick !== tick) {
+    buf.push({ tick, value });
+    while (buf.length > 1 && tick - buf[0].tick > TREND_WINDOW) buf.shift();
+  }
+  return value - buf[0].value;
+}
 
 export function FlourishingMeter() {
   const snap = useGame((g) => g.snap);
+  const trend = useTrend(snap.tick, snap.flourishing);
+  const rising = trend > 0.05;
+  const falling = trend < -0.05;
   return (
     <div className="panel flourish">
       <div className="label">Planetary Flourishing</div>
-      <div className="score">{snap.flourishing.toFixed(1)}</div>
+      <div className="score">
+        {snap.flourishing.toFixed(1)}
+        {(rising || falling) && (
+          <span
+            className="trend"
+            title={`${rising ? '+' : ''}${trend.toFixed(1)} over the last few seconds`}
+            style={{ color: rising ? '#a7d489' : '#e9b44c' }}
+          >
+            {rising ? '▲' : '▼'}
+          </span>
+        )}
+      </div>
       <div className="contributors">
         <div>
           Wellbeing {snap.wellbeing.toFixed(0)}

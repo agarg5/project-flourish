@@ -26,6 +26,7 @@ export function InspectorOverlay() {
         <div className="divider" />
         <span>Env quality</span><span>{s.envQuality.toFixed(2)}</span>
         <span>Settlement land</span><span>{s.settlementQuality.toFixed(2)}</span>
+        <span>Citizens</span><span>{snap.citizens} / {Math.round(s.comfortCapacity)}</span>
         <span>Crowding</span><span>{s.crowding.toFixed(2)}</span>
         <span>Steward fund</span><span>{snap.stewardshipBudget.toFixed(0)}</span>
         <div className="divider" />

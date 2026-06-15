@@ -5,6 +5,7 @@
 
 import { CONFIG } from './config';
 import { hexDistance } from './hex';
+import { buildingComfort, comfortCapacity, housingCapacity } from './population';
 import type { AgeDef, Content, SimState } from './types';
 import { clamp, clamp01 } from './util';
 
@@ -14,23 +15,12 @@ export interface WellbeingResult {
   amenity: number;
   envQuality: number;
   crowding: number;
+  housingCapacity: number;
+  comfortCapacity: number;
 }
 
 export function computeWellbeing(state: SimState, content: Content, age: AgeDef): WellbeingResult {
-  const buildingById = new Map(content.buildings.map((b) => [b.id, b]));
-  let needsAdd = 0;
-  let amenityAdd = 0;
-  const copies = new Map<string, number>();
-  for (const b of state.buildings) {
-    const def = buildingById.get(b.id);
-    const n = copies.get(b.id) ?? 0;
-    copies.set(b.id, n + 1);
-    const falloff = Math.pow(CONFIG.wellbeingDuplicateFalloff, n);
-    for (const m of def?.effects.wellbeing ?? []) {
-      if (m.note?.startsWith('needs')) needsAdd += m.value * falloff;
-      else amenityAdd += m.value * falloff;
-    }
-  }
+  const { needsAdd, amenityAdd } = buildingComfort(state, content);
 
   // Environmental quality: habitat quality where citizens live.
   let envCells = state.cells;
@@ -42,10 +32,11 @@ export function computeWellbeing(state: SimState, content: Content, age: AgeDef)
   }
   const envQuality = envCells.reduce((s, c) => s + c.habitatQuality, 0) / Math.max(envCells.length, 1);
 
-  const crowding = clamp01(
-    (state.buildings.length / state.cells.length - CONFIG.crowding.densityThreshold) *
-      CONFIG.crowding.scale,
-  );
+  // Crowding now tracks PEOPLE, not building footprint: a population that
+  // outgrows its amenities and surrounding greenspace feels crowded. This is
+  // what makes a dense late-game city need nearby nature (doc 03 section 3).
+  const comfort = comfortCapacity(amenityAdd, envQuality);
+  const crowding = clamp01((state.citizens / Math.max(comfort, 1) - 1) * CONFIG.citizens.crowdScale);
 
   const w = CONFIG.wellbeingWeights;
   const base01 = clamp01(
@@ -60,5 +51,13 @@ export function computeWellbeing(state: SimState, content: Content, age: AgeDef)
     0,
     age.ceilings.maxWellbeing,
   );
-  return { wellbeing, needs: needsAdd, amenity: amenityAdd, envQuality, crowding };
+  return {
+    wellbeing,
+    needs: needsAdd,
+    amenity: amenityAdd,
+    envQuality,
+    crowding,
+    housingCapacity: housingCapacity(needsAdd),
+    comfortCapacity: comfort,
+  };
 }

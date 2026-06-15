@@ -15,7 +15,7 @@ export let sim = createSimulation(undefined, { autoStewardship: true });
 // layout or state shape changes, so stale saves are discarded rather than
 // loaded into a mismatched world. ---
 const SAVE_KEY = 'flourish.save';
-const SAVE_VERSION = 5; // v5: open_water deep-sea band at the southern edge
+const SAVE_VERSION = 6; // v6: citizen population added to sim state
 
 function loadSaved(): void {
   try {
@@ -82,6 +82,7 @@ export interface UISnapshot {
   treasury: number;
   research: number;
   stewardshipBudget: number;
+  citizens: number;
   wellbeing: number;
   biodiversity: number;
   flourishing: number;
@@ -120,6 +121,7 @@ function takeSnapshot(): UISnapshot {
     treasury: s.treasury,
     research: s.researchPoints,
     stewardshipBudget: s.stewardshipBudget,
+    citizens: Math.round(s.citizens),
     wellbeing: s.wellbeing,
     biodiversity: s.biodiversity,
     flourishing: s.flourishing,
@@ -190,12 +192,15 @@ interface GameStore {
   snap: UISnapshot;
   placing: Placing | null;
   hoveredCellId: number | null;
+  /** Cell the player tapped to inspect (null = inspector closed). */
+  selectedCellId: number | null;
   /** Bumped on every Restart — lets UI (tutorial) remount for the new world. */
   restartCount: number;
   refresh: () => void;
   setSpendSplit: (split: SpendSplit) => void;
   setPlacing: (p: Placing | null) => void;
   setHoveredCell: (cellId: number | null) => void;
+  setSelectedCell: (cellId: number | null) => void;
   placeAt: (cellId: number) => void;
   advanceAge: () => void;
   restart: () => void;
@@ -205,6 +210,7 @@ export const useGame = create<GameStore>((set, get) => ({
   snap: takeSnapshot(),
   placing: null,
   hoveredCellId: null,
+  selectedCellId: null,
   restartCount: 0,
   refresh: () => set({ snap: takeSnapshot() }),
   setSpendSplit: (split) => {
@@ -215,6 +221,7 @@ export const useGame = create<GameStore>((set, get) => ({
   setHoveredCell: (hoveredCellId) => {
     if (get().hoveredCellId !== hoveredCellId) set({ hoveredCellId });
   },
+  setSelectedCell: (selectedCellId) => set({ selectedCellId }),
   placeAt: (cellId) => {
     const { placing } = get();
     if (!placing) return;
@@ -253,6 +260,7 @@ export const useGame = create<GameStore>((set, get) => ({
       snap: takeSnapshot(),
       placing: null,
       hoveredCellId: null,
+      selectedCellId: null,
       restartCount: s.restartCount + 1,
     }));
   },
@@ -263,4 +271,61 @@ export function canPlaceAt(placing: Placing, cellId: number): boolean {
   return placing.kind === 'building'
     ? sim.canPlaceBuilding(placing.id, cellId).ok
     : sim.canApplyAction(placing.id, cellId).ok;
+}
+
+export interface CellInspection {
+  id: number;
+  biomeName: string;
+  isDeadZone: boolean;
+  quality: number; // 0..1 habitat quality
+  building?: string; // display name
+  actions: string[]; // applied stewardship action display names
+  /** Species that live here now (suitable habitat + a standing population). */
+  present: { id: string; name: string; emoji: string; population: number; suitability: number }[];
+  /** Absent species whose habitat here already suits them — "build it and they come". */
+  couldThrive: { id: string; name: string; emoji: string; suitability: number }[];
+}
+
+/**
+ * Read a single cell's living state for the player-facing inspector. Reads the
+ * sim directly (like canPlaceAt) so the per-cell detail never bloats every
+ * snapshot. Cheap: a handful of suitability evaluations for one cell.
+ */
+export function inspectCell(cellId: number): CellInspection | null {
+  const cell = sim.state.cells[cellId];
+  if (!cell) return null;
+  const biome = sim.content.biomes[cell.biome];
+  const buildingDef = cell.buildingId
+    ? sim.content.buildings.find((b) => b.id === cell.buildingId)
+    : undefined;
+  const actionNames = (sim.state.cellActions[cellId] ?? []).map(
+    (id) => sim.content.actions.find((a) => a.id === id)?.name ?? id,
+  );
+
+  const present: CellInspection['present'] = [];
+  const couldThrive: CellInspection['couldThrive'] = [];
+  for (const sp of sim.content.species) {
+    const suitability = sim.suitabilityFor(cellId, sp.id);
+    if (suitability < sp.arrivalThreshold) continue;
+    const st = sim.state.species.find((s) => s.speciesId === sp.id);
+    const entry = { id: sp.id, name: sp.name, emoji: sp.uiEmoji, suitability };
+    if (st && st.population > 0) {
+      present.push({ ...entry, population: Math.round(st.population) });
+    } else {
+      couldThrive.push(entry);
+    }
+  }
+  present.sort((a, b) => b.suitability - a.suitability);
+  couldThrive.sort((a, b) => b.suitability - a.suitability);
+
+  return {
+    id: cellId,
+    biomeName: biome?.name ?? cell.biome,
+    isDeadZone: !!biome?.isDeadZone,
+    quality: cell.habitatQuality,
+    building: buildingDef?.name,
+    actions: actionNames,
+    present,
+    couldThrive,
+  };
 }
