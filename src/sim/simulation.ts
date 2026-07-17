@@ -4,6 +4,7 @@
 import { createWorldCells, START_QR } from '../data/world.seed';
 import { advanceAge, ageDef, checkAgeUp, checkTechUnlocks } from './ageProgression';
 import { computeBiodiversity } from './biodiversity';
+import { SimCaches } from './caches';
 import { CONFIG } from './config';
 import { DEFAULT_CONTENT } from './content';
 import { resolveEconomy } from './economy';
@@ -31,6 +32,9 @@ export class Simulation {
   readonly content: Content;
   readonly state: SimState;
   private readonly opts: Required<SimOptions>;
+  // Memoized spatial aggregates (never serialized; see caches.ts). Invalidated
+  // on every world mutation so results are identical to computing fresh.
+  private readonly caches = new SimCaches();
 
   constructor(content: Content = DEFAULT_CONTENT, opts: SimOptions = {}) {
     this.content = content;
@@ -81,8 +85,8 @@ export class Simulation {
 
     // The pristine world already hosts life (doc 10 section 2): species whose
     // suitability clears their threshold start at carrying capacity.
-    recomputeHabitat(this.state, content);
-    computeCapacitiesAndMarkers(this.state, content);
+    recomputeHabitat(this.state, content, this.caches);
+    computeCapacitiesAndMarkers(this.state, content, this.caches);
     for (const sp of content.species) {
       const st = this.state.species.find((s) => s.speciesId === sp.id)!;
       const startAge = content.ages[0];
@@ -91,18 +95,26 @@ export class Simulation {
         st.population = st.carryingCapacity;
       }
     }
-    computeCapacitiesAndMarkers(this.state, content);
+    computeCapacitiesAndMarkers(this.state, content, this.caches);
     for (const st of this.state.species) st.pristineCapacity = st.carryingCapacity;
     this.recomputeIndices(true);
   }
 
+  /**
+   * Drop all memoized aggregates. Must be called after `state` is replaced
+   * wholesale from outside (save-load restores into the same object graph).
+   */
+  invalidateCaches(): void {
+    this.caches.invalidate();
+  }
+
   tick(): void {
     const s = this.state;
-    recomputeHabitat(s, this.content);
+    recomputeHabitat(s, this.content, this.caches);
     if (this.opts.autoStewardship) this.autoStewardshipStep();
-    computeCapacitiesAndMarkers(s, this.content);
+    computeCapacitiesAndMarkers(s, this.content, this.caches);
     stepPopulations(s, this.content);
-    stepCitizens(s, this.content);
+    stepCitizens(s, this.content, this.caches);
     this.recomputeIndices(false);
     resolveEconomy(s, this.content, ageDef(s, this.content), this.opts);
     checkTechUnlocks(s, this.content);
@@ -113,8 +125,8 @@ export class Simulation {
   private recomputeIndices(init: boolean): void {
     const s = this.state;
     const age = ageDef(s, this.content);
-    const bio = computeBiodiversity(s, this.content);
-    const wb = computeWellbeing(s, this.content, age);
+    const bio = computeBiodiversity(s, this.content, this.caches);
+    const wb = computeWellbeing(s, this.content, age, this.caches);
 
     s.biodiversity = bio.bio01 * age.ceilings.maxBiodiversity;
     s.wellbeing = wb.wellbeing;
@@ -126,7 +138,7 @@ export class Simulation {
 
     // Ecological health: blend of global biodiversity and habitat quality in
     // the settlement impact zone, smoothed over time (doc 03 section 4).
-    const sq = settlementQuality(s, CONFIG.ecoHealth.impactRadius);
+    const sq = settlementQuality(s, CONFIG.ecoHealth.impactRadius, this.caches);
     const target = clamp01(
       CONFIG.ecoHealth.bioWeight * (s.biodiversity / 100) +
         CONFIG.ecoHealth.qualityWeight * sq,
@@ -216,6 +228,7 @@ export class Simulation {
     if (def.effects.habitat?.length) {
       s.placedEffects.push({ originCellId: cellId, sourceId: def.id, effects: def.effects.habitat });
     }
+    this.caches.bump();
     pushEvent(s, 'build', `Built ${def.name}`);
     return { ok: true };
   }
@@ -283,6 +296,7 @@ export class Simulation {
     if (def.effects.habitat?.length) {
       s.placedEffects.push({ originCellId: cellId, sourceId: def.id, effects: def.effects.habitat });
     }
+    this.caches.bump();
 
     // Reintroduction: seed a founder population of a locally-absent species
     // (eligibility validated in canApplyAction); life takes hold from there.

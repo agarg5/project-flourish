@@ -1,9 +1,10 @@
 // Populations, niches, keystones, "build it and they come" (docs 03/08).
 
+import { SimCaches } from './caches';
 import { CONFIG } from './config';
-import { suitability } from './habitat';
+import { recomputeHabitat, suitability } from './habitat';
 import { hexDistance } from './hex';
-import type { Content, SimState, SpeciesState } from './types';
+import type { Content, SimState, SpeciesState, WorldCell } from './types';
 import { moveToward, pushEvent } from './util';
 
 function stateOf(state: SimState, speciesId: string): SpeciesState {
@@ -16,62 +17,123 @@ function ageIndex(content: Content, ageId: string): number {
   return content.ages.find((a) => a.id === ageId)?.index ?? 0;
 }
 
+// Deterministic per-cell tie-break jitter for marker selection (id order alone
+// would pile every herd into the lowest-id corner of a pristine map).
+function jitter(cellId: number, salt: number): number {
+  let h = (cellId + 1) * 374761393 + (salt + 1) * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  h = h ^ (h >> 16);
+  return ((h >>> 0) % 1000) / 1000;
+}
+
+/**
+ * Pick up to markerCellCount marker cells for one species: highest jittered
+ * suitability first, kept `sep` apart, topped up with the best rest when the
+ * habitat is too small to fit that many separated herds. Equivalent to ranking
+ * all cells and greedily walking the ranking, but implemented as repeated
+ * max-scans so the per-rebuild cost is O(markers × cells) with no sort or
+ * allocation churn.
+ */
+function selectMarkers(cells: WorldCell[], scores: Float64Array, sep: number): number[] {
+  const chosen: WorldCell[] = [];
+  const pick = (requireSeparation: boolean): WorldCell | null => {
+    let best: WorldCell | null = null;
+    let bestScore = 0;
+    for (const c of cells) {
+      const s = scores[c.id];
+      // Strict > keeps the lowest id on exact ties (ascending scan order).
+      if (s <= 0 || s <= bestScore) continue;
+      if (chosen.includes(c)) continue;
+      if (requireSeparation && !chosen.every((m) => hexDistance(c, m) >= sep)) continue;
+      best = c;
+      bestScore = s;
+    }
+    return best;
+  };
+  while (chosen.length < CONFIG.markerCellCount) {
+    const c = pick(true);
+    if (!c) break;
+    chosen.push(c);
+  }
+  while (chosen.length < CONFIG.markerCellCount) {
+    const c = pick(false);
+    if (!c) break;
+    chosen.push(c);
+  }
+  return chosen.map((c) => c.id);
+}
+
+/**
+ * Rebuild the world-shape-dependent aggregates: suitability arrays, marker
+ * cells, and the K sums (base + per-keystone overlap). Only runs when the
+ * world changed (or every call, when no caches are passed).
+ */
+function rebuildCapacityAggregates(state: SimState, content: Content, caches: SimCaches): void {
+  const sep = Math.max(3, Math.round(CONFIG.world.radius / 4));
+
+  for (const [si, sp] of content.species.entries()) {
+    let scores = caches.markerScores.get(sp.id);
+    if (!scores || scores.length !== state.cells.length) {
+      scores = new Float64Array(state.cells.length);
+      caches.markerScores.set(sp.id, scores);
+    }
+    // Scores are jittered suitability — the jitter (≤5e-4) only breaks exact
+    // ties, far smaller than any real suitability difference.
+    for (const c of state.cells) scores[c.id] = suitability(c, sp) + jitter(c.id, si) * 5e-4;
+    stateOf(state, sp.id).markerCellIds = selectMarkers(state.cells, scores, sep);
+  }
+
+  // Keystones project their boost within keystoneRadius of their markers.
+  // Precompute, per species, how much qualifying capacity sits inside each
+  // keystone's range; the per-tick K is then pure arithmetic over these sums.
+  const keystoneRanges = content.species
+    .filter((sp) => sp.isKeystone)
+    .map((sp) => {
+      const origins = stateOf(state, sp.id).markerCellIds.map((id) => state.cells[id]);
+      const inRange = new Set<number>();
+      for (const c of state.cells) {
+        if (origins.some((o) => hexDistance(c, o) <= CONFIG.keystoneRadius)) inRange.add(c.id);
+      }
+      return { id: sp.id, inRange };
+    });
+
+  for (const sp of content.species) {
+    let base = 0;
+    const overlaps = new Map<string, number>(keystoneRanges.map((kr) => [kr.id, 0]));
+    for (const cell of state.cells) {
+      // Jitter is a marker-selection tie-break only; K uses raw suitability.
+      const s = suitability(cell, sp);
+      if (s < sp.arrivalThreshold) continue;
+      const contribution = sp.baseCarryingCapacity * s;
+      base += contribution;
+      for (const kr of keystoneRanges) {
+        if (kr.id === sp.id) continue;
+        if (kr.inRange.has(cell.id)) {
+          overlaps.set(kr.id, overlaps.get(kr.id)! + contribution);
+        }
+      }
+    }
+    caches.baseK.set(sp.id, base);
+    caches.overlapK.set(sp.id, overlaps);
+  }
+
+  caches.markCapacityBuilt();
+}
+
 /**
  * Recompute each species' carrying capacity K and marker cells.
  * K(s) = Σ over cells with suitability ≥ arrivalThreshold of
  *        baseCarryingCapacity × suitability × keystoneFactor (doc 08 section 4).
+ * With caches, the spatial sums are reused between world mutations and only
+ * the keystone-effectiveness and world-capacity factors are applied per tick.
  */
-export function computeCapacitiesAndMarkers(state: SimState, content: Content): void {
-  const suits = new Map<string, number[]>();
-  for (const sp of content.species) {
-    suits.set(sp.id, state.cells.map((c) => suitability(c, sp)));
-  }
-
-  // Markers first: top-N cells by suitability (render anchors + keystone range
-  // origins), kept a minimum distance apart — on a pristine map suitability
-  // ties everywhere and pure top-N would pile every herd into the lowest-id
-  // corner, making wildlife impossible to find on a big world. Exact ties are
-  // broken by a deterministic per-cell jitter (id order walks the west edge),
-  // far smaller than any real suitability difference.
-  const sep = Math.max(3, Math.round(CONFIG.world.radius / 4));
-  const jitter = (cellId: number, salt: number): number => {
-    let h = (cellId + 1) * 374761393 + (salt + 1) * 668265263;
-    h = (h ^ (h >> 13)) * 1274126177;
-    h = h ^ (h >> 16);
-    return ((h >>> 0) % 1000) / 1000;
-  };
-  for (const [si, sp] of content.species.entries()) {
-    const suit = suits.get(sp.id)!;
-    const ranked = state.cells
-      .map((c) => ({ c, s: suit[c.id] + jitter(c.id, si) * 5e-4 }))
-      .sort((a, b) => b.s - a.s || a.c.id - b.c.id);
-    const chosen: { c: (typeof state.cells)[number]; s: number }[] = [];
-    for (const cand of ranked) {
-      if (cand.s <= 0 || chosen.length >= CONFIG.markerCellCount) break;
-      if (chosen.every((m) => hexDistance(cand.c, m.c) >= sep)) chosen.push(cand);
-    }
-    // Tiny habitats may not fit N separated herds — top up with the best rest.
-    for (const cand of ranked) {
-      if (cand.s <= 0 || chosen.length >= CONFIG.markerCellCount) break;
-      if (!chosen.includes(cand)) chosen.push(cand);
-    }
-    stateOf(state, sp.id).markerCellIds = chosen.map((x) => x.c.id);
-  }
-
-  // Healthy keystones project their boost within keystoneRadius of their markers.
-  const keystoneRanges = content.species
-    .filter((sp) => sp.isKeystone)
-    .map((sp) => {
-      const st = stateOf(state, sp.id);
-      const origins = st.markerCellIds.map((id) => state.cells[id]);
-      const inRange = new Set<number>();
-      if (st.keystoneEffectiveness > 0 && st.population > 0) {
-        for (const c of state.cells) {
-          if (origins.some((o) => hexDistance(c, o) <= CONFIG.keystoneRadius)) inRange.add(c.id);
-        }
-      }
-      return { sp, st, inRange };
-    });
+export function computeCapacitiesAndMarkers(
+  state: SimState,
+  content: Content,
+  caches: SimCaches = new SimCaches(),
+): void {
+  recomputeHabitat(state, content, caches); // aggregates assume quality is current
+  if (!caches.capacityCurrent()) rebuildCapacityAggregates(state, content, caches);
 
   // The world's capacity for life scales every habitat's carrying capacity.
   // At the starting world (no terraforming) this is exactly 1.0, so pristine
@@ -80,20 +142,16 @@ export function computeCapacitiesAndMarkers(state: SimState, content: Content): 
   const worldFactor =
     state.worldCarryingCapacity / content.ages[0].ceilings.worldCarryingCapacity;
 
+  const keystones = content.species.filter((sp) => sp.isKeystone);
   for (const sp of content.species) {
-    const suit = suits.get(sp.id)!;
-    let K = 0;
-    for (const cell of state.cells) {
-      const s = suit[cell.id];
-      if (s < sp.arrivalThreshold) continue;
-      let factor = 1;
-      for (const kr of keystoneRanges) {
-        if (kr.sp.id === sp.id) continue;
-        if (kr.inRange.has(cell.id)) {
-          factor += (kr.sp.keystoneBoost ?? 0) * kr.st.keystoneEffectiveness;
-        }
-      }
-      K += sp.baseCarryingCapacity * s * factor;
+    let K = caches.baseK.get(sp.id)!;
+    const overlaps = caches.overlapK.get(sp.id)!;
+    for (const ks of keystones) {
+      if (ks.id === sp.id) continue;
+      const st = stateOf(state, ks.id);
+      // A keystone only projects while it is actually present and effective.
+      if (st.population <= 0 || st.keystoneEffectiveness <= 0) continue;
+      K += (ks.keystoneBoost ?? 0) * st.keystoneEffectiveness * (overlaps.get(ks.id) ?? 0);
     }
     stateOf(state, sp.id).carryingCapacity = K * worldFactor;
   }
