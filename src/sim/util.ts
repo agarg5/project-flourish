@@ -16,6 +16,6 @@ export function moveToward(current: number, target: number, rate: number): numbe
 const MAX_EVENTS = 30;
 
 export function pushEvent(state: SimState, type: SimEvent['type'], message: string): void {
-  state.events.push({ tick: state.tick, type, message });
+  state.events.push({ id: state.eventSeq++, tick: state.tick, type, message });
   if (state.events.length > MAX_EVENTS) state.events.splice(0, state.events.length - MAX_EVENTS);
 }

@@ -15,17 +15,38 @@ export let sim = createSimulation(undefined, { autoStewardship: true });
 // layout or state shape changes, so stale saves are discarded rather than
 // loaded into a mismatched world. ---
 const SAVE_KEY = 'flourish.save';
-const SAVE_VERSION = 6; // v6: citizen population added to sim state
+const SAVE_VERSION = 7; // v7: monotonic event ids (id/eventSeq) added to sim state
+
+/**
+ * A restored save must reference only ids the current content still defines —
+ * otherwise takeSnapshot's `content.find(...)!` lookups throw during the very
+ * first render and white-screen the app before any UI mounts. This validates
+ * the referenced graph before we trust a save; anything unrecognized (content
+ * edited without a version bump) is treated as a corrupt save.
+ */
+function isRestorable(s: SimState): boolean {
+  if (!s || !Array.isArray(s.cells) || s.cells.length !== sim.state.cells.length) return false;
+  if (!sim.content.ages.some((a) => a.id === s.age)) return false;
+  if (!Array.isArray(s.species) || !Array.isArray(s.buildings)) return false;
+  // Every cell biome must still exist: recomputeHabitat dereferences
+  // content.biomes[cell.biome].baseQuality on the first tick and would throw
+  // (freezing the sim) on an unknown biome.
+  const biomes = sim.content.biomes;
+  if (!s.cells.every((c) => Object.prototype.hasOwnProperty.call(biomes, c.biome))) return false;
+  const speciesIds = new Set(sim.content.species.map((sp) => sp.id));
+  if (!s.species.every((sp) => speciesIds.has(sp.speciesId))) return false;
+  const buildingIds = new Set(sim.content.buildings.map((b) => b.id));
+  if (!s.buildings.every((b) => buildingIds.has(b.id))) return false;
+  return true;
+}
 
 function loadSaved(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw) as { version: number; state: SimState };
-    if (parsed.version !== SAVE_VERSION) return;
-    const s = parsed.state;
-    if (!s || !Array.isArray(s.cells) || s.cells.length !== sim.state.cells.length) return;
-    Object.assign(sim.state, s); // identity preserved, contents restored
+    if (parsed.version !== SAVE_VERSION || !isRestorable(parsed.state)) return;
+    Object.assign(sim.state, parsed.state); // identity preserved, contents restored
     sim.invalidateCaches(); // restored cells are new objects; memoized aggregates are stale
   } catch {
     /* corrupt save / private mode — ignore, start fresh */
@@ -42,8 +63,14 @@ export function saveGame(): void {
 
 loadSaved();
 if (typeof window !== 'undefined') {
-  // Auto-save a few times a minute so a closed tab doesn't lose progress.
+  // Auto-save a few times a minute, and flush immediately when the tab is
+  // hidden or closed so the last few seconds of actions aren't lost (the 8s
+  // interval alone could drop up to 8s of progress on a quick close).
   setInterval(saveGame, 8000);
+  window.addEventListener('pagehide', saveGame);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveGame();
+  });
 }
 
 export interface UICell {
@@ -109,12 +136,79 @@ export interface UISnapshot {
   };
 }
 
+// Structural sharing: the sim advances ~6×/s but most of a snapshot changes
+// rarely. takeSnapshot reuses the previous snapshot's sub-arrays when their
+// source is unchanged, so Zustand selectors on `cells`/`buildings`/`events`/
+// `placeables` (the heavy render layers and menus subscribe to these) keep
+// referential identity and don't re-render every tick. Only the scalars and
+// the ~10-entry species array are rebuilt each tick.
+let prevSnap: UISnapshot | null = null;
+// buildings + placedEffects strictly increases on any world mutation (same key
+// the sim uses for its caches), so an unchanged value means cells/buildings are
+// byte-for-byte the same as last snapshot.
+let prevWorldRev = -1;
+let prevPlaceSig = '';
+
+// A Restart swaps in a fresh sim; drop the memo so the new (smaller) world
+// isn't mistaken for the previous one on the first snapshot after restart.
+function resetSnapshotMemo(): void {
+  prevSnap = null;
+  prevWorldRev = -1;
+  prevPlaceSig = '';
+}
+
 function takeSnapshot(): UISnapshot {
   const s = sim.state;
   const cur = sim.content.ages.find((a) => a.id === s.age)!;
   const next = sim.content.ages.find((a) => a.index === cur.index + 1);
   const speciesDefs = new Map(sim.content.species.map((sp) => [sp.id, sp]));
-  return {
+
+  const worldRev = s.buildings.length + s.placedEffects.length;
+  const worldUnchanged = prevSnap !== null && worldRev === prevWorldRev;
+  prevWorldRev = worldRev;
+
+  const cells: UICell[] = worldUnchanged
+    ? prevSnap!.cells
+    : s.cells.map((c) => ({
+        id: c.id, q: c.q, r: c.r, biome: c.biome,
+        quality: c.habitatQuality, buildingId: c.buildingId,
+      }));
+  const buildings = worldUnchanged ? prevSnap!.buildings : s.buildings.map((b) => ({ ...b }));
+
+  // Events: reuse when the newest event id and count are unchanged.
+  const lastEventId = s.events.length ? s.events[s.events.length - 1].id : -1;
+  const eventsUnchanged =
+    prevSnap !== null &&
+    prevSnap.events.length === s.events.length &&
+    (prevSnap.events.length === 0 || prevSnap.events[prevSnap.events.length - 1].id === lastEventId);
+  const events = eventsUnchanged ? prevSnap!.events : [...s.events];
+
+  // Placeables: the list + each item's affordability. Reuse when the signature
+  // (unlocked set + which items are affordable at the current treasury) holds.
+  const placeableDefs = [
+    ...sim.availableBuildings().map((b) => ({ kind: 'building' as const, def: b })),
+    ...sim.availableActions().map((a) => ({ kind: 'action' as const, def: a })),
+  ];
+  const placeSig = placeableDefs.map((p) => `${p.def.id}:${s.treasury >= p.def.cost ? 1 : 0}`).join(',');
+  const placeablesUnchanged = prevSnap !== null && placeSig === prevPlaceSig;
+  prevPlaceSig = placeSig;
+  const placeables: UIPlaceable[] = placeablesUnchanged
+    ? prevSnap!.placeables
+    : placeableDefs.map((p) => ({
+        kind: p.kind,
+        id: p.def.id,
+        name: p.def.name,
+        description: p.def.description,
+        cost: p.def.cost,
+        affordable: s.treasury >= p.def.cost,
+      }));
+
+  const unlockedTech =
+    prevSnap !== null && prevSnap.unlockedTech.length === s.unlockedTech.length
+      ? prevSnap.unlockedTech
+      : [...s.unlockedTech];
+
+  const snap: UISnapshot = {
     tick: s.tick,
     age: s.age,
     ageName: cur.name,
@@ -133,11 +227,8 @@ function takeSnapshot(): UISnapshot {
     worldVitalityBaseline: sim.content.ages[0].ceilings.worldCarryingCapacity,
     sub: { ...s.sub },
     spendSplit: { ...s.spendSplit },
-    cells: s.cells.map((c) => ({
-      id: c.id, q: c.q, r: c.r, biome: c.biome,
-      quality: c.habitatQuality, buildingId: c.buildingId,
-    })),
-    buildings: s.buildings.map((b) => ({ ...b })),
+    cells,
+    buildings,
     species: s.species
       .filter((sp) => sp.population > 0)
       .map((sp) => {
@@ -152,26 +243,9 @@ function takeSnapshot(): UISnapshot {
           markerCellIds: sp.markerCellIds.length ? [...sp.markerCellIds] : [0],
         };
       }),
-    events: [...s.events],
-    unlockedTech: [...s.unlockedTech],
-    placeables: [
-      ...sim.availableBuildings().map((b) => ({
-        kind: 'building' as const,
-        id: b.id,
-        name: b.name,
-        description: b.description,
-        cost: b.cost,
-        affordable: s.treasury >= b.cost,
-      })),
-      ...sim.availableActions().map((a) => ({
-        kind: 'action' as const,
-        id: a.id,
-        name: a.name,
-        description: a.description,
-        cost: a.cost,
-        affordable: s.treasury >= a.cost,
-      })),
-    ],
+    events,
+    unlockedTech,
+    placeables,
     nextAge: next
       ? {
           name: next.name,
@@ -182,6 +256,8 @@ function takeSnapshot(): UISnapshot {
         }
       : undefined,
   };
+  prevSnap = snap;
+  return snap;
 }
 
 export interface Placing {
@@ -232,12 +308,18 @@ export const useGame = create<GameStore>((set, get) => ({
         : sim.applyAction(placing.id, cellId);
     if (res.ok) {
       sfxPlace();
-      // Keep placement mode active only if another copy is still affordable.
-      const stillAffordable =
-        placing.kind === 'building'
-          ? sim.content.buildings.find((b) => b.id === placing.id)!.cost <= sim.state.treasury
-          : sim.content.actions.find((a) => a.id === placing.id)!.cost <= sim.state.treasury;
-      set({ snap: takeSnapshot(), placing: stillAffordable ? placing : null });
+      // Keep placement mode active only if another copy is still affordable AND
+      // still repeatable. A reintroduction is a one-shot: once the species is
+      // back it's invalid everywhere, so staying in placement mode would just
+      // buzz on every further click — exit instead.
+      let keep: boolean;
+      if (placing.kind === 'building') {
+        keep = sim.content.buildings.find((b) => b.id === placing.id)!.cost <= sim.state.treasury;
+      } else {
+        const action = sim.content.actions.find((a) => a.id === placing.id)!;
+        keep = action.cost <= sim.state.treasury && !action.effects.reintroduceSpecies;
+      }
+      set({ snap: takeSnapshot(), placing: keep ? placing : null });
     } else {
       sfxInvalid();
     }
@@ -250,6 +332,7 @@ export const useGame = create<GameStore>((set, get) => ({
   },
   restart: () => {
     sim = createSimulation(undefined, { autoStewardship: true });
+    resetSnapshotMemo();
     try {
       localStorage.removeItem(SAVE_KEY);
       // A fresh world replays the tutorial (Tutorial remounts via restartCount).

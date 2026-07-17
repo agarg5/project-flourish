@@ -57,30 +57,50 @@ class SceneBoundary extends Component<
 }
 
 // Plays cues for sim events (tech discoveries, species arrivals/departures)
-// and tunes the ambient birdsong to biodiversity. Events are diffed by object
-// identity (snapshots reuse the same event objects), so the capped feed and
-// loaded saves don't replay old sounds.
+// and tunes the ambient birdsong to biodiversity. Events carry a monotonic id,
+// so we replay only ids past the last one seen — robust even when more than a
+// feed's worth of events arrive between renders (a burst would otherwise all
+// look "new" under object-identity diffing), and silent across loaded saves.
 function SoundDirector() {
   const events = useGame((g) => g.snap.events);
   const biodiversity = useGame((g) => g.snap.biodiversity);
-  const lastSeen = useRef<unknown>(events[events.length - 1] ?? null);
+  const lastSeenId = useRef<number>(events.length ? events[events.length - 1].id : -1);
 
   useEffect(() => {
     setBirdLevel(biodiversity / 100);
   }, [biodiversity]);
 
   useEffect(() => {
-    const prev = lastSeen.current;
-    const start = prev ? events.findIndex((e) => (e as unknown) === prev) + 1 : 0;
-    for (const e of events.slice(start)) {
+    for (const e of events) {
+      if (e.id <= lastSeenId.current) continue;
       if (e.type === 'tech') sfxTech();
       else if (e.type === 'arrival') sfxArrival();
       else if (e.type === 'departure') sfxDeparture();
     }
-    lastSeen.current = events[events.length - 1] ?? prev;
+    if (events.length) lastSeenId.current = events[events.length - 1].id;
   }, [events]);
 
   return null;
+}
+
+// A last-resort guard around the HUD: if one panel throws (a malformed snapshot,
+// a content edit that outran a save), keep the 3D world and the rest of the app
+// alive rather than white-screening. The sim keeps running underneath.
+class HudBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="scene-fallback" style={{ pointerEvents: 'none' }}>
+          A panel hit an error and was hidden. Your world is safe — Restart clears it.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function MuteButton() {
@@ -90,7 +110,7 @@ function MuteButton() {
     setMutedState(!muted);
   };
   return (
-    <button onClick={toggle} title={muted ? 'Unmute sound' : 'Mute sound'}>
+    <button onClick={toggle} title={muted ? 'Unmute sound' : 'Mute sound'} aria-label={muted ? 'Unmute sound' : 'Mute sound'}>
       {muted ? '🔇 Sound' : '🔊 Sound'}
     </button>
   );
@@ -124,25 +144,31 @@ export function App() {
       <SceneBoundary key={sceneKey}>
         <Scene onContextRestored={() => setSceneKey((k) => k + 1)} />
       </SceneBoundary>
-      <div className="hud">
-        <FlourishingMeter />
-        <StatusPanel />
-        <InspectorOverlay />
-        <SpendSplitControl />
-        <EventsFeed />
-        <Minimap />
-        <CellInspector />
-        <BuildMenu />
-        <TechTree />
-        <Tutorial key={restartCount} />
-        <SoundDirector />
-        <div className="camera-btns">
-          <button onClick={() => cameraApi.goMacro()}>🌍 Macro</button>
-          <button onClick={() => cameraApi.goHome()} title="Back to your settlement">🏠 Home</button>
-          <button onClick={() => cameraApi.goIntimate()}>🏕️ Intimate</button>
-          <MuteButton />
-          <button className="restart-btn" onClick={onRestart} title="Start a new world">↻ Restart</button>
+      <HudBoundary>
+        <div className="hud">
+          <FlourishingMeter key={restartCount} />
+          <StatusPanel />
+          <InspectorOverlay />
+          <SpendSplitControl />
+          <EventsFeed />
+          <Minimap />
+          <CellInspector />
+          <BuildMenu />
+          <TechTree />
+          <Tutorial key={restartCount} />
+          <SoundDirector key={restartCount} />
         </div>
+      </HudBoundary>
+      {/* Camera + Restart live OUTSIDE the HUD boundary so that if a panel
+          throws, the recovery action (Restart clears the offending save) is
+          still reachable. These controls don't read the snapshot, so they
+          can't be the source of a HUD crash. */}
+      <div className="camera-btns">
+        <button onClick={() => cameraApi.goMacro()} aria-label="Macro view (whole planet)">🌍 Macro</button>
+        <button onClick={() => cameraApi.goHome()} title="Back to your settlement" aria-label="Home view (your settlement)">🏠 Home</button>
+        <button onClick={() => cameraApi.goIntimate()} aria-label="Intimate view (ground level)">🏕️ Intimate</button>
+        <MuteButton />
+        <button className="restart-btn" onClick={onRestart} title="Start a new world" aria-label="Restart — start a new world">↻ Restart</button>
       </div>
     </div>
   );
