@@ -1,32 +1,14 @@
-// Buildings render as KayKit Medieval Hexagon Pack models (CC0, see
-// public/models/kaykit/LICENSE.txt), normalized to cell size, with a short
-// grow-in animation on construction. The fire hearth is a procedural campfire.
+// Buildings render as procedural eco-futurist ("solarpunk") architecture — see
+// buildingArt.tsx — normalized to cell size, with a short grow-in animation on
+// construction. The fire hearth stays a warm procedural campfire.
 
-import { Clone, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { axialToWorld } from '../sim';
 import { useGame } from '../state/store';
+import { BuildingArt } from './buildingArt';
 import { cellTopY, HEX_SIZE } from './World';
-
-// Paths go through BASE_URL so they resolve when the site is served from a
-// subpath (e.g. GitHub Pages).
-const MODELS: Record<string, string> = {
-  forager_camp: `${import.meta.env.BASE_URL}models/kaykit/building_home_A_red.gltf`,
-  polyculture_plot: `${import.meta.env.BASE_URL}models/kaykit/building_grain.gltf`,
-  granary: `${import.meta.env.BASE_URL}models/kaykit/building_windmill_red.gltf`,
-  irrigation_channel: `${import.meta.env.BASE_URL}models/kaykit/building_watermill_red.gltf`,
-  smithy: `${import.meta.env.BASE_URL}models/kaykit/building_blacksmith_red.gltf`,
-  trade_post: `${import.meta.env.BASE_URL}models/kaykit/building_market_red.gltf`,
-  well: `${import.meta.env.BASE_URL}models/kaykit/building_well_red.gltf`,
-  sawmill: `${import.meta.env.BASE_URL}models/kaykit/building_lumbermill_red.gltf`,
-  ore_mine: `${import.meta.env.BASE_URL}models/kaykit/building_mine_red.gltf`,
-};
-
-for (const path of Object.values(MODELS)) useGLTF.preload(path);
-
-const TARGET_FOOTPRINT = 1.5; // world units across — fits inside a hex cell
 
 /** Scale-in ease for newly built structures (frame-rate smooth). */
 function GrowIn({ children }: { children: React.ReactNode }) {
@@ -42,17 +24,6 @@ function GrowIn({ children }: { children: React.ReactNode }) {
       {children}
     </group>
   );
-}
-
-function KayKitBuilding({ path }: { path: string }) {
-  const { scene } = useGLTF(path);
-  const { scale, yOffset } = useMemo(() => {
-    const box = new THREE.Box3().setFromObject(scene);
-    const size = box.getSize(new THREE.Vector3());
-    const s = TARGET_FOOTPRINT / Math.max(size.x, size.z, 0.001);
-    return { scale: s, yOffset: -box.min.y * s };
-  }, [scene]);
-  return <Clone object={scene} scale={scale} position={[0, yOffset, 0]} castShadow receiveShadow />;
 }
 
 function Campfire() {
@@ -97,10 +68,13 @@ export function Buildings() {
         if (!cell) return null;
         const { x, z } = axialToWorld(cell.q, cell.r, HEX_SIZE);
         const y = cellTopY(cell.id, cell.biome);
-        const path = MODELS[b.id];
         return (
           <group key={`${b.cellId}-${b.id}`} position={[x, y, z]}>
-            <GrowIn>{path ? <KayKitBuilding path={path} /> : <Campfire />}</GrowIn>
+            <GrowIn>
+              {/* The fire hearth keeps its warm procedural campfire; every other
+                  building is procedural eco-futurist architecture (buildingArt). */}
+              {b.id === 'fire_hearth' ? <Campfire /> : <BuildingArt id={b.id} />}
+            </GrowIn>
           </group>
         );
       })}
