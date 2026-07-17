@@ -1,6 +1,7 @@
 // Biodiversity = weighted blend of niche coverage, keystone health,
 // population health, and biome diversity (doc 03 section 2).
 
+import type { SimCaches } from './caches';
 import { CONFIG } from './config';
 import type { Content, NicheId, SimState } from './types';
 import { clamp01 } from './util';
@@ -18,7 +19,11 @@ export interface BiodiversityResult {
   biomeDiversity: number;
 }
 
-export function computeBiodiversity(state: SimState, content: Content): BiodiversityResult {
+export function computeBiodiversity(
+  state: SimState,
+  content: Content,
+  caches: SimCaches,
+): BiodiversityResult {
   const stById = new Map(state.species.map((s) => [s.speciesId, s]));
 
   // A keystone "unlocks" its supported niches for others: their contribution
@@ -83,19 +88,24 @@ export function computeBiodiversity(state: SimState, content: Content): Biodiver
   }
 
   // Biome diversity: distinct viable (non-dead-zone) biome types present.
-  const byBiome = new Map<string, { sum: number; n: number }>();
-  for (const c of state.cells) {
-    const acc = byBiome.get(c.biome) ?? { sum: 0, n: 0 };
-    acc.sum += c.habitatQuality;
-    acc.n++;
-    byBiome.set(c.biome, acc);
-  }
-  let viable = 0;
-  for (const [biome, acc] of byBiome) {
-    if (content.biomes[biome]?.isDeadZone) continue;
-    if (acc.sum / acc.n >= CONFIG.viableBiomeQuality) viable++;
-  }
-  const biomeDiversity = clamp01(viable / CONFIG.biomeDiversityDenominator);
+  // A pure function of biomes + habitat quality, so cacheable between world
+  // mutations (the O(cells) pass dominates an otherwise O(species) function).
+  const computeBiomeDiversity = (): number => {
+    const byBiome = new Map<string, { sum: number; n: number }>();
+    for (const c of state.cells) {
+      const acc = byBiome.get(c.biome) ?? { sum: 0, n: 0 };
+      acc.sum += c.habitatQuality;
+      acc.n++;
+      byBiome.set(c.biome, acc);
+    }
+    let viable = 0;
+    for (const [biome, acc] of byBiome) {
+      if (content.biomes[biome]?.isDeadZone) continue;
+      if (acc.sum / acc.n >= CONFIG.viableBiomeQuality) viable++;
+    }
+    return clamp01(viable / CONFIG.biomeDiversityDenominator);
+  };
+  const biomeDiversity = caches.getBiomeDiversity(state, computeBiomeDiversity);
 
   const w = CONFIG.biodiversityWeights;
   const bio01 = clamp01(

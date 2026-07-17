@@ -28,6 +28,14 @@ export function hexagonCoords(radius: number): Axial[] {
   return out;
 }
 
+/** Coordinate window for qrKey packing; |q| and |r| must stay below this. */
+export const QR_KEY_LIMIT = 1 << 9;
+
+/** Pack axial coords into one integer map key (collision-free within ±QR_KEY_LIMIT). */
+export function qrKey(q: number, r: number): number {
+  return (q + QR_KEY_LIMIT) * (QR_KEY_LIMIT * 2) + (r + QR_KEY_LIMIT);
+}
+
 const SQRT3 = Math.sqrt(3);
 
 /** Axial -> plan position (x east, z south) for pointy-top hexes of the given size. */

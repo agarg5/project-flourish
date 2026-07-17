@@ -26,6 +26,7 @@ function loadSaved(): void {
     const s = parsed.state;
     if (!s || !Array.isArray(s.cells) || s.cells.length !== sim.state.cells.length) return;
     Object.assign(sim.state, s); // identity preserved, contents restored
+    sim.invalidateCaches(); // restored cells are new objects; memoized aggregates are stale
   } catch {
     /* corrupt save / private mode — ignore, start fresh */
   }

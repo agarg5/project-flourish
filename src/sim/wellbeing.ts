@@ -3,8 +3,9 @@
 // The environment term is the biophilia coupling: a greener world literally
 // makes citizens happier — keep it (doc 03 calls it thematically central).
 
+import type { SimCaches } from './caches';
 import { CONFIG } from './config';
-import { hexDistance } from './hex';
+import { settlementQuality } from './habitat';
 import { buildingComfort, comfortCapacity, housingCapacity } from './population';
 import type { AgeDef, Content, SimState } from './types';
 import { clamp, clamp01 } from './util';
@@ -19,18 +20,16 @@ export interface WellbeingResult {
   comfortCapacity: number;
 }
 
-export function computeWellbeing(state: SimState, content: Content, age: AgeDef): WellbeingResult {
+export function computeWellbeing(
+  state: SimState,
+  content: Content,
+  age: AgeDef,
+  caches: SimCaches,
+): WellbeingResult {
   const { needsAdd, amenityAdd } = buildingComfort(state, content);
 
   // Environmental quality: habitat quality where citizens live.
-  let envCells = state.cells;
-  if (state.buildings.length > 0) {
-    const origins = state.buildings.map((b) => state.cells[b.cellId]);
-    envCells = state.cells.filter((c) =>
-      origins.some((o) => hexDistance(c, o) <= CONFIG.envSampleRadius),
-    );
-  }
-  const envQuality = envCells.reduce((s, c) => s + c.habitatQuality, 0) / Math.max(envCells.length, 1);
+  const envQuality = settlementQuality(state, CONFIG.envSampleRadius, caches);
 
   // Crowding now tracks PEOPLE, not building footprint: a population that
   // outgrows its amenities and surrounding greenspace feels crowded. This is
