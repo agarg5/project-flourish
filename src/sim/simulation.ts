@@ -260,9 +260,16 @@ export class Simulation {
     const cell = s.cells[cellId];
     if (!cell) return { ok: false, error: 'no such cell' };
     // Dead zones reject every action except terraforming — terraforming is the
-    // one verb that can bring dead land back to life.
-    if (this.content.biomes[cell.biome]?.isDeadZone && def.kind !== 'terraform') {
+    // one verb that can bring dead land back to life. Conversely, terraforming
+    // only makes sense ON a dead zone: on living land it converts nothing, so
+    // reject it there rather than charge the player for a no-op that still
+    // banks its carrying-capacity bonus.
+    const onDeadZone = !!this.content.biomes[cell.biome]?.isDeadZone;
+    if (onDeadZone && def.kind !== 'terraform') {
       return { ok: false, error: 'dead zone' };
+    }
+    if (!onDeadZone && def.kind === 'terraform') {
+      return { ok: false, error: 'not a dead zone' };
     }
     // Reintroduction is rare and earned: a species can only be brought back if
     // it is locally absent AND its habitat is already ready to receive it.

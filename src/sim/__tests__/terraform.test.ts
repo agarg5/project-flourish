@@ -95,6 +95,20 @@ describe('Phase 1 — terraforming converts dead zones to living land (doc 12)',
     expect(desert.biome).toBe('wetland');
   });
 
+  test('terraforming is rejected on living land (no free carrying-capacity bonus)', () => {
+    const sim = createSimulation();
+    sim.state.unlockedTech.push('terraforming');
+    sim.state.treasury = 1000;
+    const grassland = sim.state.cells.find((c) => c.biome === 'grassland');
+    if (!grassland) throw new Error('seed has no grassland cell');
+    const bonusBefore = sim.state.terraformBonus;
+
+    const res = sim.applyAction('green_desert', grassland.id);
+    expect(res.ok).toBe(false);
+    expect(grassland.biome).toBe('grassland');
+    expect(sim.state.terraformBonus).toBe(bonusBefore); // no bonus banked for a no-op
+  });
+
   test('terraforming a dead zone leaves a DIFFERENT adjacent dead zone untouched', () => {
     const sim = createSimulation();
     sim.state.unlockedTech.push('terraforming');
