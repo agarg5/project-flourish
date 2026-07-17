@@ -10,6 +10,7 @@ import { axialToWorld } from '../sim';
 import { useGame } from '../state/store';
 import type { UICell } from '../state/store';
 import { cellHash, cellHeight, HEX_SIZE, scatterInCell } from './cellVisuals';
+import { useRev } from './useRev';
 
 interface Item {
   x: number;
@@ -96,7 +97,7 @@ function DecorInstances({
   flat?: boolean;
 }) {
   return (
-    <Instances limit={limit} castShadow receiveShadow frustumCulled={false}>
+    <Instances limit={limit} frames={2} castShadow receiveShadow frustumCulled={false}>
       {geometry}
       <meshStandardMaterial roughness={0.85} flatShading={flat} />
       {items.map((it, i) => (
@@ -122,15 +123,18 @@ export function Decorations() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const d = useMemo(() => buildDecor(cells), [sig]);
 
+  // Remount instanced dressing when the scatter changes so the finite frame
+  // budget re-uploads the new layout.
+  const rev = useRev(sig);
   return (
     <group>
       {/* short bladed reeds in the wetland, grass tufts on the grassland */}
-      <DecorInstances items={d.reeds} limit={5200} flat geometry={<coneGeometry args={[0.07, 0.34, 4]} />} />
-      <DecorInstances items={d.tufts} limit={2600} flat geometry={<coneGeometry args={[0.09, 0.16, 5]} />} />
+      <DecorInstances key={`reeds${rev}`} items={d.reeds} limit={5200} flat geometry={<coneGeometry args={[0.07, 0.34, 4]} />} />
+      <DecorInstances key={`tufts${rev}`} items={d.tufts} limit={2600} flat geometry={<coneGeometry args={[0.09, 0.16, 5]} />} />
       {/* desert: smooth dune mounds, dry scrub, bleached pebbles */}
-      <DecorInstances items={d.dunes} limit={320} geometry={<sphereGeometry args={[0.9, 14, 9]} />} />
-      <DecorInstances items={d.scrub} limit={700} flat geometry={<coneGeometry args={[0.13, 0.14, 6]} />} />
-      <DecorInstances items={d.pebbles} limit={600} flat geometry={<icosahedronGeometry args={[1, 0]} />} />
+      <DecorInstances key={`dunes${rev}`} items={d.dunes} limit={320} geometry={<sphereGeometry args={[0.9, 14, 9]} />} />
+      <DecorInstances key={`scrub${rev}`} items={d.scrub} limit={700} flat geometry={<coneGeometry args={[0.13, 0.14, 6]} />} />
+      <DecorInstances key={`pebbles${rev}`} items={d.pebbles} limit={600} flat geometry={<icosahedronGeometry args={[1, 0]} />} />
     </group>
   );
 }

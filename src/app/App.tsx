@@ -146,7 +146,7 @@ export function App() {
       </SceneBoundary>
       <HudBoundary>
         <div className="hud">
-          <FlourishingMeter key={restartCount} />
+          <FlourishingMeter key={`meter-${restartCount}`} />
           <StatusPanel />
           <InspectorOverlay />
           <SpendSplitControl />
@@ -155,8 +155,10 @@ export function App() {
           <CellInspector />
           <BuildMenu />
           <TechTree />
-          <Tutorial key={restartCount} />
-          <SoundDirector key={restartCount} />
+          {/* Distinct key prefixes: these three siblings all remount on restart,
+              but a bare restartCount would make them share key "0" and collide. */}
+          <Tutorial key={`tutorial-${restartCount}`} />
+          <SoundDirector key={`sound-${restartCount}`} />
         </div>
       </HudBoundary>
       {/* Camera + Restart live OUTSIDE the HUD boundary so that if a panel

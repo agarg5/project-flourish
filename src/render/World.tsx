@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { DoubleSide } from 'three';
 import { useGame } from '../state/store';
 import { cellHeight } from './cellVisuals';
@@ -23,6 +23,10 @@ export function World() {
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const geometry = useMemo(() => buildTerrainGeometry(cells), [sig]);
+  // R3F doesn't dispose a geometry swapped out of the `geometry={}` prop, so a
+  // quality/biome change that rebuilds this ~8k-vertex mesh would leak the old
+  // GPU buffers. Free them when replaced or on unmount.
+  useEffect(() => () => geometry?.dispose(), [geometry]);
   if (!geometry) return null;
   return (
     <mesh geometry={geometry} receiveShadow castShadow>

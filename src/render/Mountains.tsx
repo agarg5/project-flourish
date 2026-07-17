@@ -8,7 +8,7 @@
 // each peak. The whole range is a few dozen tiny cones — one draw call.
 
 import { Instance, Instances, useGLTF } from '@react-three/drei';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { axialToWorld } from '../sim';
@@ -143,7 +143,7 @@ function TalusField({ path, items }: { path: string; items: TalusItem[] }) {
     return { geometry: mesh.geometry, material: Object.values(materials)[0] as THREE.Material, unit, footY: -box.min.y / unit };
   }, [nodes, materials]);
   return (
-    <Instances geometry={node.geometry} material={node.material} limit={300} castShadow receiveShadow frustumCulled={false}>
+    <Instances geometry={node.geometry} material={node.material} limit={300} frames={2} castShadow receiveShadow frustumCulled={false}>
       {items.map((it, i) => (
         <Instance
           key={i}
@@ -201,6 +201,9 @@ export function Mountains() {
     peakGeos.forEach((g) => g.dispose());
     return { rangeGeometry, talusA, talusC };
   }, [sig]);
+
+  // Free the merged range geometry if it's ever rebuilt, and on unmount.
+  useEffect(() => () => rangeGeometry?.dispose(), [rangeGeometry]);
 
   return (
     <group>
