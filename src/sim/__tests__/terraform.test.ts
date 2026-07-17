@@ -95,6 +95,29 @@ describe('Phase 1 — terraforming converts dead zones to living land (doc 12)',
     expect(desert.biome).toBe('wetland');
   });
 
+  test('terraforming a dead zone leaves a DIFFERENT adjacent dead zone untouched', () => {
+    const sim = createSimulation();
+    sim.state.unlockedTech.push('terraforming');
+    sim.state.treasury = 1000;
+    const desert = desertCell(sim);
+    // Force a neighbouring cell to a different dead zone (open water) within
+    // green_desert's radius. The fix must convert only the matching biome.
+    const neighbour = sim.state.cells.find(
+      (c) => c.id !== desert.id && Math.max(
+        Math.abs(c.q - desert.q),
+        Math.abs(c.r - desert.r),
+        Math.abs(c.q + c.r - desert.q - desert.r),
+      ) === 1,
+    );
+    if (!neighbour) throw new Error('desert cell has no neighbour');
+    neighbour.biome = 'open_water';
+    expect(sim.content.biomes.open_water.isDeadZone).toBe(true);
+
+    sim.applyAction('green_desert', desert.id);
+    expect(desert.biome).toBe('grassland');
+    expect(neighbour.biome).toBe('open_water'); // living land never overwrites a different dead zone
+  });
+
   test('seed_shallows raises deep open water into a living shallow coast', () => {
     const sim = createSimulation();
     sim.state.unlockedTech.push('terraforming');

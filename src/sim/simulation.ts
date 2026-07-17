@@ -84,18 +84,36 @@ export class Simulation {
     };
 
     // The pristine world already hosts life (doc 10 section 2): species whose
-    // suitability clears their threshold start at carrying capacity.
+    // suitability clears their threshold start at carrying capacity. Keystones
+    // only boost their neighbours' K once they themselves are present, so the
+    // first capacity pass (all populations zero) yields UN-boosted K. Seeding
+    // to that and stopping would leave keystone neighbours below their true
+    // capacity, so an untouched world would drift upward over its first ~100
+    // ticks. Instead iterate seed→recompute to the fixed point: once every
+    // eligible species is present the boost gate (population > 0) stops
+    // changing, so K — and thus pristineCapacity — settles.
+    const startAge = content.ages[0];
+    const seedPopulations = (): boolean => {
+      let changed = false;
+      for (const sp of content.species) {
+        const st = this.state.species.find((s) => s.speciesId === sp.id)!;
+        const ageOk = !sp.ageAvailableFrom || sp.ageAvailableFrom === startAge.id;
+        const target = !sp.reintroOnly && ageOk && st.carryingCapacity > 0 ? st.carryingCapacity : 0;
+        if (target !== st.population) {
+          st.population = target;
+          changed = true;
+        }
+      }
+      return changed;
+    };
     recomputeHabitat(this.state, content, this.caches);
     computeCapacitiesAndMarkers(this.state, content, this.caches);
-    for (const sp of content.species) {
-      const st = this.state.species.find((s) => s.speciesId === sp.id)!;
-      const startAge = content.ages[0];
-      const ageOk = !sp.ageAvailableFrom || sp.ageAvailableFrom === startAge.id;
-      if (!sp.reintroOnly && ageOk && st.carryingCapacity > 0) {
-        st.population = st.carryingCapacity;
-      }
+    // Bounded: the population>0 gate can flip at most once per species, so the
+    // fixed point is reached within `species.length + 1` iterations.
+    for (let i = 0; i <= content.species.length; i++) {
+      if (!seedPopulations()) break;
+      computeCapacitiesAndMarkers(this.state, content, this.caches);
     }
-    computeCapacitiesAndMarkers(this.state, content, this.caches);
     for (const st of this.state.species) st.pristineCapacity = st.carryingCapacity;
     this.recomputeIndices(true);
   }
@@ -275,7 +293,9 @@ export class Simulation {
     s.cellActions[cellId] = [...(s.cellActions[cellId] ?? []), actionId];
 
     // Terraforming permanently converts qualifying cells' biome. We only ever
-    // convert dead-zone cells, so greening a desert never overwrites living land.
+    // convert dead-zone cells that MATCH the clicked cell's biome, so greening
+    // a desert never overwrites living land — nor a different dead zone that
+    // happens to sit within radius (e.g. an open-water cell next to sand).
     const fromBiome = cell.biome;
     let terraformedCount = 0;
     let createdBiome: typeof cell.biome | undefined;
@@ -283,6 +303,7 @@ export class Simulation {
       if (!eff.createsBiome) continue;
       const radius = eff.radius ?? 0;
       for (const c of s.cells) {
+        if (c.biome !== fromBiome) continue;
         if (!this.content.biomes[c.biome]?.isDeadZone) continue;
         if (hexDistance(c, cell) > radius) continue;
         c.biome = eff.createsBiome;
