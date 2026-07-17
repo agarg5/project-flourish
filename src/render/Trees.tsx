@@ -9,6 +9,7 @@ import { axialToWorld } from '../sim';
 import { useGame } from '../state/store';
 import type { UICell } from '../state/store';
 import { cellHash, cellHeight, HEX_SIZE, scatterInCell } from './cellVisuals';
+import { useRev } from './useRev';
 
 const PINE = `${import.meta.env.BASE_URL}models/kaykit/tree_single_A.gltf`;
 const BROADLEAF = `${import.meta.env.BASE_URL}models/kaykit/tree_single_B.gltf`;
@@ -41,8 +42,12 @@ function useTreeNode(path: string) {
 function TreeInstances({ path, items, targetHeight, limit }: { path: string; items: TreeItem[]; targetHeight: number; limit: number }) {
   const node = useTreeNode(path);
   const base = targetHeight / Math.max(node.modelHeight, 0.001);
+  // Trees never move: `frames={2}` uploads the instance matrices for the first
+  // couple of frames after (re)mount, then stops — instead of drei's default of
+  // re-decomposing and re-uploading all ~4k matrices every frame forever. The
+  // parent remounts this via a key when the layout actually changes.
   return (
-    <Instances geometry={node.geometry} material={node.material} limit={limit} castShadow receiveShadow>
+    <Instances geometry={node.geometry} material={node.material} limit={limit} frames={2} castShadow receiveShadow>
       {items.map((it, i) => (
         <Instance
           key={i}
@@ -90,10 +95,13 @@ export function Trees() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig]);
 
+  // Remount the instanced meshes when the scatter changes so their finite
+  // frame budget re-uploads the new layout (see TreeInstances).
+  const rev = useRev(sig);
   return (
     <group>
-      <TreeInstances path={PINE} items={pines} targetHeight={1.1} limit={3400} />
-      <TreeInstances path={BROADLEAF} items={broadleaf} targetHeight={0.95} limit={1300} />
+      <TreeInstances key={`pine${rev}`} path={PINE} items={pines} targetHeight={1.1} limit={3400} />
+      <TreeInstances key={`broad${rev}`} path={BROADLEAF} items={broadleaf} targetHeight={0.95} limit={1300} />
     </group>
   );
 }

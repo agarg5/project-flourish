@@ -3,19 +3,33 @@
 
 import { Clone, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { CONFIG } from '../sim';
 import { useGame } from '../state/store';
 import { cellHash } from './cellVisuals';
 import { buildWaterGeometry } from './terrain';
 
-// Water is one continuous shared-vertex surface over the wetland (see
+// Water is one continuous shared-vertex surface over every water cell (see
 // terrain.ts), so it reads as a single pond rather than hexagonal plates.
 export function WetlandWater() {
   const cells = useGame((g) => g.snap.cells);
+  // Rebuild when the set of water cells changes — late-age terraforming
+  // (create_oasis → wetland, seed_shallows → coast_shallow) grows the water,
+  // and a `[]`-deps memo would freeze it at the starting layout until reload.
+  const waterSig = useMemo(
+    () =>
+      cells
+        .filter((c) => c.biome === 'wetland' || c.biome === 'coast_shallow' || c.biome === 'open_water')
+        .map((c) => c.id)
+        .join(','),
+    [cells],
+  );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const geometry = useMemo(() => buildWaterGeometry(cells), []);
+  const geometry = useMemo(() => buildWaterGeometry(cells), [waterSig]);
+  // R3F does not dispose a geometry swapped out of a `geometry={}` prop; free
+  // the old buffers when a rebuild replaces it (or on unmount).
+  useEffect(() => () => geometry?.dispose(), [geometry]);
   if (!geometry) return null;
   return (
     <mesh geometry={geometry} receiveShadow>
