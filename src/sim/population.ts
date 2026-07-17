@@ -3,7 +3,6 @@
 // the basis for crowding (people vs. amenities + greenspace) and the intimate
 // view's villagers. Pure and deterministic — no randomness.
 
-import type { SimCaches } from './caches';
 import { CONFIG } from './config';
 import type { BuildingDef, Content, SimState } from './types';
 
@@ -20,25 +19,22 @@ export interface Comfort {
  * Shared by the wellbeing blend and the citizen growth target so they never
  * drift apart.
  */
-export function buildingComfort(state: SimState, content: Content, caches?: SimCaches): Comfort {
-  const compute = (): Comfort => {
-    const byId = new Map<string, BuildingDef>(content.buildings.map((b) => [b.id, b]));
-    let needsAdd = 0;
-    let amenityAdd = 0;
-    const copies = new Map<string, number>();
-    for (const b of state.buildings) {
-      const def = byId.get(b.id);
-      const n = copies.get(b.id) ?? 0;
-      copies.set(b.id, n + 1);
-      const falloff = Math.pow(CONFIG.wellbeingDuplicateFalloff, n);
-      for (const m of def?.effects.wellbeing ?? []) {
-        if (m.note?.startsWith('needs')) needsAdd += m.value * falloff;
-        else amenityAdd += m.value * falloff;
-      }
+export function buildingComfort(state: SimState, content: Content): Comfort {
+  const byId = new Map<string, BuildingDef>(content.buildings.map((b) => [b.id, b]));
+  let needsAdd = 0;
+  let amenityAdd = 0;
+  const copies = new Map<string, number>();
+  for (const b of state.buildings) {
+    const def = byId.get(b.id);
+    const n = copies.get(b.id) ?? 0;
+    copies.set(b.id, n + 1);
+    const falloff = Math.pow(CONFIG.wellbeingDuplicateFalloff, n);
+    for (const m of def?.effects.wellbeing ?? []) {
+      if (m.note?.startsWith('needs')) needsAdd += m.value * falloff;
+      else amenityAdd += m.value * falloff;
     }
-    return { needsAdd, amenityAdd };
-  };
-  return caches ? caches.getComfort(state, compute) : compute();
+  }
+  return { needsAdd, amenityAdd };
 }
 
 /** Housing the settlement can support: a founding band plus needs buildings. */
@@ -60,8 +56,8 @@ export function comfortCapacity(amenityAdd: number, envQuality: number): number 
 }
 
 /** Advance the citizen population one tick toward its housing capacity. */
-export function stepCitizens(state: SimState, content: Content, caches?: SimCaches): void {
-  const { needsAdd } = buildingComfort(state, content, caches);
+export function stepCitizens(state: SimState, content: Content): void {
+  const { needsAdd } = buildingComfort(state, content);
   const cap = housingCapacity(needsAdd);
   const c = state.citizens;
   // Logistic toward capacity: grows when housed, eases down if housing is lost.

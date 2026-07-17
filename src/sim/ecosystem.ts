@@ -1,6 +1,6 @@
 // Populations, niches, keystones, "build it and they come" (docs 03/08).
 
-import { SimCaches } from './caches';
+import type { SimCaches } from './caches';
 import { CONFIG } from './config';
 import { recomputeHabitat, suitability } from './habitat';
 import { hexDistance } from './hex';
@@ -70,38 +70,35 @@ function selectMarkers(cells: WorldCell[], scores: Float64Array, sep: number): n
  */
 function rebuildCapacityAggregates(state: SimState, content: Content, caches: SimCaches): void {
   const sep = Math.max(3, Math.round(CONFIG.world.radius / 4));
-
-  for (const [si, sp] of content.species.entries()) {
-    let scores = caches.markerScores.get(sp.id);
-    if (!scores || scores.length !== state.cells.length) {
-      scores = new Float64Array(state.cells.length);
-      caches.markerScores.set(sp.id, scores);
-    }
-    // Scores are jittered suitability — the jitter (≤5e-4) only breaks exact
-    // ties, far smaller than any real suitability difference.
-    for (const c of state.cells) scores[c.id] = suitability(c, sp) + jitter(c.id, si) * 5e-4;
-    stateOf(state, sp.id).markerCellIds = selectMarkers(state.cells, scores, sep);
-  }
+  const scores = new Float64Array(state.cells.length); // jittered for marker ties
 
   // Keystones project their boost within keystoneRadius of their markers.
   // Precompute, per species, how much qualifying capacity sits inside each
   // keystone's range; the per-tick K is then pure arithmetic over these sums.
-  const keystoneRanges = content.species
-    .filter((sp) => sp.isKeystone)
-    .map((sp) => {
+  const keystoneRanges: { id: string; inRange: Set<number> }[] = [];
+
+  for (const [si, sp] of content.species.entries()) {
+    // The jitter (≤5e-4) only breaks exact ties in marker selection, far
+    // smaller than any real suitability difference; K uses raw suitability.
+    for (const c of state.cells) {
+      scores[c.id] = suitability(c, sp) + jitter(c.id, si) * 5e-4;
+    }
+    stateOf(state, sp.id).markerCellIds = selectMarkers(state.cells, scores, sep);
+
+    if (sp.isKeystone) {
       const origins = stateOf(state, sp.id).markerCellIds.map((id) => state.cells[id]);
       const inRange = new Set<number>();
       for (const c of state.cells) {
         if (origins.some((o) => hexDistance(c, o) <= CONFIG.keystoneRadius)) inRange.add(c.id);
       }
-      return { id: sp.id, inRange };
-    });
+      keystoneRanges.push({ id: sp.id, inRange });
+    }
+  }
 
   for (const sp of content.species) {
     let base = 0;
     const overlaps = new Map<string, number>(keystoneRanges.map((kr) => [kr.id, 0]));
     for (const cell of state.cells) {
-      // Jitter is a marker-selection tie-break only; K uses raw suitability.
       const s = suitability(cell, sp);
       if (s < sp.arrivalThreshold) continue;
       const contribution = sp.baseCarryingCapacity * s;
@@ -117,23 +114,25 @@ function rebuildCapacityAggregates(state: SimState, content: Content, caches: Si
     caches.overlapK.set(sp.id, overlaps);
   }
 
-  caches.markCapacityBuilt();
+  caches.markCapacityBuilt(state);
 }
 
 /**
  * Recompute each species' carrying capacity K and marker cells.
  * K(s) = Σ over cells with suitability ≥ arrivalThreshold of
  *        baseCarryingCapacity × suitability × keystoneFactor (doc 08 section 4).
- * With caches, the spatial sums are reused between world mutations and only
- * the keystone-effectiveness and world-capacity factors are applied per tick.
+ * The spatial sums are reused between world mutations; only the keystone-
+ * effectiveness and world-capacity factors are applied per tick. Note this
+ * derives habitat quality itself (via recomputeHabitat) — it does not consume
+ * externally fabricated habitatQuality values.
  */
 export function computeCapacitiesAndMarkers(
   state: SimState,
   content: Content,
-  caches: SimCaches = new SimCaches(),
+  caches: SimCaches,
 ): void {
   recomputeHabitat(state, content, caches); // aggregates assume quality is current
-  if (!caches.capacityCurrent()) rebuildCapacityAggregates(state, content, caches);
+  if (!caches.capacityCurrent(state)) rebuildCapacityAggregates(state, content, caches);
 
   // The world's capacity for life scales every habitat's carrying capacity.
   // At the starting world (no terraforming) this is exactly 1.0, so pristine

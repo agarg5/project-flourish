@@ -5,7 +5,7 @@
 
 import type { SimCaches } from './caches';
 import { CONFIG } from './config';
-import { buildingZone } from './habitat';
+import { settlementQuality } from './habitat';
 import { buildingComfort, comfortCapacity, housingCapacity } from './population';
 import type { AgeDef, Content, SimState } from './types';
 import { clamp, clamp01 } from './util';
@@ -24,13 +24,12 @@ export function computeWellbeing(
   state: SimState,
   content: Content,
   age: AgeDef,
-  caches?: SimCaches,
+  caches: SimCaches,
 ): WellbeingResult {
-  const { needsAdd, amenityAdd } = buildingComfort(state, content, caches);
+  const { needsAdd, amenityAdd } = buildingComfort(state, content);
 
   // Environmental quality: habitat quality where citizens live.
-  const envCells = buildingZone(state, CONFIG.envSampleRadius, caches);
-  const envQuality = envCells.reduce((s, c) => s + c.habitatQuality, 0) / Math.max(envCells.length, 1);
+  const envQuality = settlementQuality(state, CONFIG.envSampleRadius, caches);
 
   // Crowding now tracks PEOPLE, not building footprint: a population that
   // outgrows its amenities and surrounding greenspace feels crowded. This is

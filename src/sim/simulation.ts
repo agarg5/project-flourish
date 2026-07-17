@@ -32,8 +32,8 @@ export class Simulation {
   readonly content: Content;
   readonly state: SimState;
   private readonly opts: Required<SimOptions>;
-  // Memoized spatial aggregates (never serialized; see caches.ts). Invalidated
-  // on every world mutation so results are identical to computing fresh.
+  // Memoized spatial aggregates (never serialized). Staleness is detected from
+  // state itself — see caches.ts — so results are identical to computing fresh.
   private readonly caches = new SimCaches();
 
   constructor(content: Content = DEFAULT_CONTENT, opts: SimOptions = {}) {
@@ -114,7 +114,7 @@ export class Simulation {
     if (this.opts.autoStewardship) this.autoStewardshipStep();
     computeCapacitiesAndMarkers(s, this.content, this.caches);
     stepPopulations(s, this.content);
-    stepCitizens(s, this.content, this.caches);
+    stepCitizens(s, this.content);
     this.recomputeIndices(false);
     resolveEconomy(s, this.content, ageDef(s, this.content), this.opts);
     checkTechUnlocks(s, this.content);
@@ -228,7 +228,6 @@ export class Simulation {
     if (def.effects.habitat?.length) {
       s.placedEffects.push({ originCellId: cellId, sourceId: def.id, effects: def.effects.habitat });
     }
-    this.caches.bump();
     pushEvent(s, 'build', `Built ${def.name}`);
     return { ok: true };
   }
@@ -296,7 +295,6 @@ export class Simulation {
     if (def.effects.habitat?.length) {
       s.placedEffects.push({ originCellId: cellId, sourceId: def.id, effects: def.effects.habitat });
     }
-    this.caches.bump();
 
     // Reintroduction: seed a founder population of a locally-absent species
     // (eligibility validated in canApplyAction); life takes hold from there.

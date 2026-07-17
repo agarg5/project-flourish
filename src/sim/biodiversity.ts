@@ -22,7 +22,7 @@ export interface BiodiversityResult {
 export function computeBiodiversity(
   state: SimState,
   content: Content,
-  caches?: SimCaches,
+  caches: SimCaches,
 ): BiodiversityResult {
   const stById = new Map(state.species.map((s) => [s.speciesId, s]));
 
@@ -105,9 +105,7 @@ export function computeBiodiversity(
     }
     return clamp01(viable / CONFIG.biomeDiversityDenominator);
   };
-  const biomeDiversity = caches
-    ? caches.getBiomeDiversity(computeBiomeDiversity)
-    : computeBiomeDiversity();
+  const biomeDiversity = caches.getBiomeDiversity(state, computeBiomeDiversity);
 
   const w = CONFIG.biodiversityWeights;
   const bio01 = clamp01(
