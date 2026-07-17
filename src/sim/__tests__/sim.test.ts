@@ -40,6 +40,46 @@ describe('determinism (doc 04: same seed + same inputs = same outputs)', () => {
   });
 });
 
+describe('pristine world starts at equilibrium (doc 10 section 2)', () => {
+  test('no seed species starts below its pristine carrying capacity', () => {
+    const sim = createSimulation();
+    for (const sp of sim.state.species) {
+      if (sp.population <= 0) continue;
+      expect(sp.population).toBeGreaterThanOrEqual(sp.pristineCapacity - 1e-6);
+    }
+  });
+
+  test('an untouched world does not drift upward over its first 300 ticks', () => {
+    const sim = createSimulation();
+    const bio0 = sim.state.biodiversity;
+    for (let t = 0; t < 300; t++) sim.tick();
+    // Equilibrium: idle biodiversity holds steady (keystone-boosted capacity is
+    // baked into the start state, so nothing grows into slack it started below).
+    expect(Math.abs(sim.state.biodiversity - bio0)).toBeLessThan(0.5);
+  });
+});
+
+describe('auto-stewardship (M2 demo path)', () => {
+  test('the stewardship income share accrues and buys restoration near the settlement', () => {
+    const sim = createSimulation(undefined, { autoStewardship: true });
+    sim.setSpendSplit({ buildings: 0.4, rnd: 0.2, stewardship: 0.4 });
+    // A building both funds income above subsistence and anchors the search zone.
+    sim.placeBuilding('forager_camp', sim.cellsByDistanceFromStart()[0].id);
+
+    let budgetEverPositive = false;
+    for (let t = 0; t < 400; t++) {
+      sim.tick();
+      if (sim.state.stewardshipBudget > 0) budgetEverPositive = true;
+    }
+    expect(budgetEverPositive).toBe(true);
+    // Stewards should have planted at least one hedgerow (a cellAction) by now.
+    const hedgerows = Object.values(sim.state.cellActions)
+      .flat()
+      .filter((a) => a === 'plant_hedgerow').length;
+    expect(hedgerows).toBeGreaterThan(0);
+  });
+});
+
 describe('sanity bounds', () => {
   test('no index goes negative or NaN over a long idle run', () => {
     const sim = createSimulation();
