@@ -8,6 +8,10 @@ const TREND_WINDOW = 30;
 function useTrend(tick: number, value: number): number {
   const samples = useRef<{ tick: number; value: number }[]>([]);
   const buf = samples.current;
+  // Guard against a world reset (tick jumps backward): a stale buffer would
+  // compare the new world against the old and never trim. Component keying on
+  // restartCount already remounts this, but reset defensively here too.
+  if (buf.length > 0 && tick < buf[buf.length - 1].tick) buf.length = 0;
   if (buf.length === 0 || buf[buf.length - 1].tick !== tick) {
     buf.push({ tick, value });
     while (buf.length > 1 && tick - buf[0].tick > TREND_WINDOW) buf.shift();

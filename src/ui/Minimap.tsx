@@ -133,8 +133,18 @@ export function Minimap() {
   };
 
   return (
-    <div className="panel minimap" style={{ width: SIZE, height: SIZE }} onClick={handleClick}>
-      <canvas ref={canvasRef} width={SIZE} height={SIZE} />
+    <div
+      className="panel minimap"
+      style={{ width: SIZE, height: SIZE }}
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      aria-label="World minimap — click to recenter the camera"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') cameraApi.goHome();
+      }}
+    >
+      <canvas ref={canvasRef} width={SIZE} height={SIZE} aria-hidden="true" />
       <div ref={markerRef} className="minimap-marker" />
     </div>
   );

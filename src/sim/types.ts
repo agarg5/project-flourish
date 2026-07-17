@@ -148,6 +148,9 @@ export interface SpeciesState {
 }
 
 export interface SimEvent {
+  /** Monotonic id, unique and increasing for the life of a world (survives the
+   *  capped feed and save/load) — lets consumers reliably diff "what's new". */
+  id: number;
   tick: number;
   type: 'arrival' | 'departure' | 'ageUp' | 'tech' | 'build' | 'action' | 'stewardship';
   message: string;
@@ -203,6 +206,7 @@ export interface SimState {
   sub: SubIndices;
 
   events: SimEvent[];
+  eventSeq: number;              // next event id to assign (monotonic)
 }
 
 export interface Content {

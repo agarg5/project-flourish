@@ -75,6 +75,7 @@ export class Simulation {
       terraformBonus: 0,
       ecoHealthSustainedTicks: 0,
       ageUpReady: false,
+      eventSeq: 0,
       sub: {
         nicheCoverage: 0, keystoneHealth: 0, populationHealth: 0, biomeDiversity: 0,
         needs: 0, amenity: 0, envQuality: 0, crowding: 0, settlementQuality: 0,
