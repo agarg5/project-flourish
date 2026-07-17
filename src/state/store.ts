@@ -293,7 +293,9 @@ export const useGame = create<GameStore>((set, get) => ({
   setSpendSplit: (split) => {
     sim.setSpendSplit(split);
     set({ snap: takeSnapshot() });
-    saveGame();
+    // No eager save here: the slider fires this per-pixel during a drag, and a
+    // ~200KB stringify + localStorage write per move would jank the drag. The
+    // 8s interval + pagehide/visibilitychange handlers persist it soon enough.
   },
   setPlacing: (placing) => set({ placing }),
   setHoveredCell: (hoveredCellId) => {
