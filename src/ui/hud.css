@@ -370,7 +370,12 @@
   left: 14px;
   display: flex;
   gap: 8px;
+  /* Sits outside .hud (so it survives a HUD crash), so restate the inherited
+     typography that .hud would otherwise provide. */
+  font-family: 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  box-sizing: border-box;
 }
+.camera-btns * { box-sizing: border-box; }
 .camera-btns button {
   pointer-events: auto;
   background: rgba(18, 32, 24, 0.85);
