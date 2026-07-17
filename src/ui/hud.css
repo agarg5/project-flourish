@@ -172,16 +172,17 @@
   background: rgba(42, 64, 48, 0.7);
   color: #ece8da;
   border: 1px solid rgba(214, 228, 200, 0.22);
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 12px;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 .buildmenu .item.action { background: rgba(38, 66, 74, 0.7); }
 .buildmenu .item:hover:not(:disabled) { border-color: rgba(214, 228, 200, 0.6); }
 .buildmenu .item.selected { border-color: #b5e48c; background: rgba(85, 115, 75, 0.9); box-shadow: 0 0 10px rgba(181, 228, 140, 0.35); }
 .buildmenu .item:disabled { opacity: 0.4; cursor: default; }
-.buildmenu .cost { font-size: 11px; opacity: 0.8; }
+.buildmenu .cost { font-size: 12px; opacity: 0.8; }
 .buildmenu .hint { margin-top: 7px; font-size: 11px; opacity: 0.75; }
 
 /* Age-up button */
@@ -238,17 +239,19 @@
   position: absolute;
   top: 14px;
   left: 50%;
-  transform: translateX(186px);
+  transform: translateX(196px);
   pointer-events: auto;
   background: rgba(18, 32, 24, 0.85);
-  color: #e8e4d4;
-  border: 1px solid rgba(214, 228, 200, 0.25);
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 12px;
+  color: #eef3e6;
+  border: 1px solid rgba(214, 228, 200, 0.3);
+  border-radius: 11px;
+  padding: 11px 20px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
-.techtree-toggle:hover { background: rgba(42, 64, 48, 0.95); }
+.techtree-toggle:hover { background: rgba(42, 64, 48, 0.95); border-color: rgba(181, 228, 140, 0.6); }
 .techtree {
   position: absolute;
   top: 60px;
@@ -379,12 +382,14 @@
 .camera-btns button {
   pointer-events: auto;
   background: rgba(18, 32, 24, 0.85);
-  color: #e8e4d4;
-  border: 1px solid rgba(214, 228, 200, 0.25);
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 13px;
+  color: #eef3e6;
+  border: 1px solid rgba(214, 228, 200, 0.28);
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
-.camera-btns button:hover { background: rgba(42, 64, 48, 0.95); }
+.camera-btns button:hover { background: rgba(42, 64, 48, 0.95); border-color: rgba(181, 228, 140, 0.5); }
 .camera-btns .restart-btn { opacity: 0.85; }

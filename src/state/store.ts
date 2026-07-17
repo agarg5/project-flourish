@@ -293,6 +293,9 @@ export const useGame = create<GameStore>((set, get) => ({
   setSpendSplit: (split) => {
     sim.setSpendSplit(split);
     set({ snap: takeSnapshot() });
+    // No eager save here: the slider fires this per-pixel during a drag, and a
+    // ~200KB stringify + localStorage write per move would jank the drag. The
+    // 8s interval + pagehide/visibilitychange handlers persist it soon enough.
   },
   setPlacing: (placing) => set({ placing }),
   setHoveredCell: (hoveredCellId) => {
@@ -320,6 +323,7 @@ export const useGame = create<GameStore>((set, get) => ({
         keep = action.cost <= sim.state.treasury && !action.effects.reintroduceSpecies;
       }
       set({ snap: takeSnapshot(), placing: keep ? placing : null });
+      saveGame(); // persist right after a build/action so a refresh never loses it
     } else {
       sfxInvalid();
     }
@@ -328,6 +332,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (sim.advanceAge().ok) {
       sfxAgeUp();
       set({ snap: takeSnapshot() });
+      saveGame();
     }
   },
   restart: () => {
