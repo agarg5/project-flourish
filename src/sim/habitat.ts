@@ -13,7 +13,7 @@ import { clamp01 } from './util';
  * unless the world changed since the last rebuild.
  */
 export function recomputeHabitat(state: SimState, content: Content, caches: SimCaches): void {
-  if (caches.habitatCurrent(state)) return;
+  if (caches.isBuilt('habitat', state)) return;
 
   for (const cell of state.cells) {
     cell.habitatQuality = content.biomes[cell.biome].baseQuality;
@@ -38,7 +38,7 @@ export function recomputeHabitat(state: SimState, content: Content, caches: SimC
   for (const cell of state.cells) {
     cell.habitatQuality = clamp01(cell.habitatQuality);
   }
-  caches.markHabitatBuilt(state);
+  caches.markBuilt('habitat', state);
 }
 
 /** suitability(cell, s) = biomeMatch × habitatQuality (doc 08 section 3b). */

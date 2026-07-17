@@ -64,9 +64,8 @@ function selectMarkers(cells: WorldCell[], scores: Float64Array, sep: number): n
 }
 
 /**
- * Rebuild the world-shape-dependent aggregates: suitability arrays, marker
- * cells, and the K sums (base + per-keystone overlap). Only runs when the
- * world changed (or every call, when no caches are passed).
+ * Rebuild the world-shape-dependent aggregates: marker cells and the K sums
+ * (base + per-keystone overlap). Only runs when the world changed.
  */
 function rebuildCapacityAggregates(state: SimState, content: Content, caches: SimCaches): void {
   const sep = Math.max(3, Math.round(CONFIG.world.radius / 4));
@@ -114,7 +113,7 @@ function rebuildCapacityAggregates(state: SimState, content: Content, caches: Si
     caches.overlapK.set(sp.id, overlaps);
   }
 
-  caches.markCapacityBuilt(state);
+  caches.markBuilt('capacity', state);
 }
 
 /**
@@ -132,7 +131,7 @@ export function computeCapacitiesAndMarkers(
   caches: SimCaches,
 ): void {
   recomputeHabitat(state, content, caches); // aggregates assume quality is current
-  if (!caches.capacityCurrent(state)) rebuildCapacityAggregates(state, content, caches);
+  if (!caches.isBuilt('capacity', state)) rebuildCapacityAggregates(state, content, caches);
 
   // The world's capacity for life scales every habitat's carrying capacity.
   // At the starting world (no terraforming) this is exactly 1.0, so pristine

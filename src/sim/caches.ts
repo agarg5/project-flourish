@@ -8,13 +8,16 @@
 // ~14ms/tick; cached, the steady-state tick is arithmetic only.
 //
 // The cache key is DERIVED FROM STATE, not maintained by discipline: every
-// world mutation the sim supports appends to one of three append-only
-// collections (buildings, placedEffects, cellActions), so their combined
-// count strictly increases on each mutation. A future mutating command is
-// covered automatically as long as it appends to one of them; a command that
-// mutates cells in place without doing so (none exists today) would need to
-// join the key. Save-load replaces the state graph wholesale — including cell
-// object identities — so it must call invalidate(), which starts a new epoch.
+// habitat-relevant mutation appends to an append-only collection — building
+// placement appends to `buildings`, and habitat actions (including terraform,
+// since a biome change is only expressible as a habitat effect) push onto
+// `placedEffects` — so their combined length strictly increases on each such
+// mutation. Reintroduction changes populations only, which the K evaluation
+// reads live, so it needs no invalidation. A future command that mutated
+// cells in place without appending to either collection (none exists today)
+// would need to join the key. Save-load replaces the state graph wholesale —
+// including cell object identities — so it must call invalidate(), which
+// starts a new epoch.
 //
 // Owned by Simulation, never serialized.
 
@@ -32,8 +35,7 @@ export class SimCaches {
   private epoch = 0;
 
   private cellIndex: Map<number, WorldCell> | null = null;
-  private habitatBuilt: Slot<true> | null = null;
-  private capacityBuilt: Slot<true> | null = null;
+  private built = new Map<'habitat' | 'capacity', { epoch: number; key: number }>();
   private zoneQuality = new Map<number, Slot<number>>();
   private biomeDiversity: Slot<number> | null = null;
 
@@ -46,19 +48,16 @@ export class SimCaches {
   invalidate(): void {
     this.epoch++;
     this.cellIndex = null;
-    this.habitatBuilt = null;
-    this.capacityBuilt = null;
+    this.built.clear();
     this.zoneQuality.clear();
     this.biomeDiversity = null;
     this.baseK.clear();
     this.overlapK.clear();
   }
 
-  /** World-mutation counter; strictly increases with each build/action/terraform. */
+  /** Habitat-mutation counter; strictly increases with each build/action/terraform (see header). */
   private keyOf(state: SimState): number {
-    let n = state.buildings.length + state.placedEffects.length;
-    for (const id in state.cellActions) n += state.cellActions[id].length;
-    return n;
+    return state.buildings.length + state.placedEffects.length;
   }
 
   private current(slot: Slot<unknown> | null | undefined, state: SimState): boolean {
@@ -69,18 +68,12 @@ export class SimCaches {
     return { epoch: this.epoch, key: this.keyOf(state), value };
   }
 
-  habitatCurrent(state: SimState): boolean {
-    return this.current(this.habitatBuilt, state);
+  isBuilt(what: 'habitat' | 'capacity', state: SimState): boolean {
+    const m = this.built.get(what);
+    return m !== undefined && m.epoch === this.epoch && m.key === this.keyOf(state);
   }
-  markHabitatBuilt(state: SimState): void {
-    this.habitatBuilt = this.slot(state, true);
-  }
-
-  capacityCurrent(state: SimState): boolean {
-    return this.current(this.capacityBuilt, state);
-  }
-  markCapacityBuilt(state: SimState): void {
-    this.capacityBuilt = this.slot(state, true);
+  markBuilt(what: 'habitat' | 'capacity', state: SimState): void {
+    this.built.set(what, { epoch: this.epoch, key: this.keyOf(state) });
   }
 
   /** (q,r) → cell lookup. Topology is fixed per epoch, so this never expires. */
