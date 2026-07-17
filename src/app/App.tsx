@@ -145,27 +145,31 @@ export function App() {
         <Scene onContextRestored={() => setSceneKey((k) => k + 1)} />
       </SceneBoundary>
       <HudBoundary>
-      <div className="hud">
-        <FlourishingMeter key={restartCount} />
-        <StatusPanel />
-        <InspectorOverlay />
-        <SpendSplitControl />
-        <EventsFeed />
-        <Minimap />
-        <CellInspector />
-        <BuildMenu />
-        <TechTree />
-        <Tutorial key={restartCount} />
-        <SoundDirector key={restartCount} />
-        <div className="camera-btns">
-          <button onClick={() => cameraApi.goMacro()} aria-label="Macro view (whole planet)">🌍 Macro</button>
-          <button onClick={() => cameraApi.goHome()} title="Back to your settlement" aria-label="Home view (your settlement)">🏠 Home</button>
-          <button onClick={() => cameraApi.goIntimate()} aria-label="Intimate view (ground level)">🏕️ Intimate</button>
-          <MuteButton />
-          <button className="restart-btn" onClick={onRestart} title="Start a new world" aria-label="Restart — start a new world">↻ Restart</button>
+        <div className="hud">
+          <FlourishingMeter key={restartCount} />
+          <StatusPanel />
+          <InspectorOverlay />
+          <SpendSplitControl />
+          <EventsFeed />
+          <Minimap />
+          <CellInspector />
+          <BuildMenu />
+          <TechTree />
+          <Tutorial key={restartCount} />
+          <SoundDirector key={restartCount} />
         </div>
-      </div>
       </HudBoundary>
+      {/* Camera + Restart live OUTSIDE the HUD boundary so that if a panel
+          throws, the recovery action (Restart clears the offending save) is
+          still reachable. These controls don't read the snapshot, so they
+          can't be the source of a HUD crash. */}
+      <div className="camera-btns">
+        <button onClick={() => cameraApi.goMacro()} aria-label="Macro view (whole planet)">🌍 Macro</button>
+        <button onClick={() => cameraApi.goHome()} title="Back to your settlement" aria-label="Home view (your settlement)">🏠 Home</button>
+        <button onClick={() => cameraApi.goIntimate()} aria-label="Intimate view (ground level)">🏕️ Intimate</button>
+        <MuteButton />
+        <button className="restart-btn" onClick={onRestart} title="Start a new world" aria-label="Restart — start a new world">↻ Restart</button>
+      </div>
     </div>
   );
 }

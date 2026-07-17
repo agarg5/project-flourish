@@ -28,6 +28,10 @@ function isRestorable(s: SimState): boolean {
   if (!s || !Array.isArray(s.cells) || s.cells.length !== sim.state.cells.length) return false;
   if (!sim.content.ages.some((a) => a.id === s.age)) return false;
   if (!Array.isArray(s.species) || !Array.isArray(s.buildings)) return false;
+  // Every cell biome must still exist: recomputeHabitat dereferences
+  // content.biomes[cell.biome].baseQuality on the first tick and would throw
+  // (freezing the sim) on an unknown biome.
+  if (!s.cells.every((c) => !!sim.content.biomes[c.biome])) return false;
   const speciesIds = new Set(sim.content.species.map((sp) => sp.id));
   if (!s.species.every((sp) => speciesIds.has(sp.speciesId))) return false;
   const buildingIds = new Set(sim.content.buildings.map((b) => b.id));
