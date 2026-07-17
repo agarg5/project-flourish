@@ -17,11 +17,15 @@ export function WetlandWater() {
   // Rebuild when the set of water cells changes — late-age terraforming
   // (create_oasis → wetland, seed_shallows → coast_shallow) grows the water,
   // and a `[]`-deps memo would freeze it at the starting layout until reload.
+  // Include biome, not just id: water height is per-biome (open_water 0.18,
+  // coast_shallow 0.20, wetland 0.22 in cellHeight), so seed_shallows
+  // (open_water → coast_shallow) keeps the same id set but must still rebuild
+  // the sheet at the new height.
   const waterSig = useMemo(
     () =>
       cells
         .filter((c) => c.biome === 'wetland' || c.biome === 'coast_shallow' || c.biome === 'open_water')
-        .map((c) => c.id)
+        .map((c) => `${c.id}:${c.biome}`)
         .join(','),
     [cells],
   );
